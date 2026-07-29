@@ -43,8 +43,8 @@ func _ready() -> void:
 	_slots.size = Vector2(Cfg.FIELD_W, 150.0)
 	content.add_child(_slots)
 
-	label("W / S  change letter      A / D  move      J  confirm",
-		Cfg.FIELD_H - 200.0, 20, Cfg.UI_DIM)
+	label("W / S  LETTER    A / D  MOVE    J  OK",
+		Cfg.FIELD_H - 200.0, 19, Cfg.UI_DIM)
 	_timer_label = label("", Cfg.FIELD_H - 150.0, 26, Cfg.UI_WARN)
 	_refresh()
 
@@ -157,7 +157,7 @@ class SlotStrip:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		var f := ThemeDB.fallback_font
+		var f := PixelFont.get_font()
 		var box := Vector2(96.0, 116.0)
 		var gap := 26.0
 		var total := box.x * chars.length() + gap * (chars.length() - 1)

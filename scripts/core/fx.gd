@@ -77,7 +77,7 @@ var _font: Font
 
 func _ready() -> void:
 	z_index = Cfg.Z_FX
-	_font = ThemeDB.fallback_font
+	_font = PixelFont.get_font()
 	for i in SPARK_POOL:
 		var s := OneShot.new()
 		s.visible = false

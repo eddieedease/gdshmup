@@ -38,11 +38,12 @@ var _l_graze: Label
 var _l_bullets: Label
 
 var _t := 0.0
+var _alert := 0.0
 
 
 func _ready() -> void:
 	layer = 2
-	_font = ThemeDB.fallback_font
+	_font = PixelFont.get_font()
 
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -69,6 +70,13 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	_t += dt
 	_overlay.tick(dt)
+	if _alert > 0.0 or _left.alert > 0.0:
+		_left.alert = _alert
+		_right.alert = _alert
+		_left.pulse = _t
+		_right.pulse = _t
+		_left.queue_redraw()
+		_right.queue_redraw()
 
 
 # --- Construction ------------------------------------------------------------
@@ -105,7 +113,7 @@ func _build_left() -> void:
 	_l_stage_name = _label(_left, "", 16, Cfg.UI_DIM)
 
 	_l_keys = _label(_left, "", 14, Cfg.UI_DIM)
-	_l_keys.text = "WASD / ARROWS  MOVE\nJ  SHOT   (fast)\nK  LASER  (slow)\nSPACE / L  BOMB\nESC  PAUSE"
+	_l_keys.text = "WASD  MOVE\nJ  SHOT\nK  LASER\nSPACE  BOMB\nESC  PAUSE"
 
 
 func _build_right() -> void:
@@ -256,6 +264,13 @@ func set_message(text: String, sub: String = "") -> void:
 	_overlay.queue_redraw()
 
 
+## Boss alert dressing, 0 = off. Drives the pulsing sidebars and the red
+## vignette; the game raises it as the boss loses health.
+func set_alert(level: float) -> void:
+	_alert = clampf(level, 0.0, 1.0)
+	_overlay.alert = _alert
+
+
 ## Full-field white flash, used for bombs and boss deaths.
 func flash(amount: float) -> void:
 	_overlay.flash = maxf(_overlay.flash, amount)
@@ -266,22 +281,37 @@ func flash(amount: float) -> void:
 class PanelBox:
 	extends Control
 	var side := -1  ## -1 = left panel, +1 = right panel.
+	## Boss alert level. Above zero the panel goes red and starts scrolling
+	## hazard stripes toward the playfield, which reads from the corner of the
+	## eye without stealing attention from the bullets.
+	var alert := 0.0
+	var pulse := 0.0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Cfg.UI_BG)
+		var throb: float = 0.5 + 0.5 * sin(pulse * (3.0 + 5.0 * alert))
+		var hot: float = alert * throb
+		var accent: Color = Cfg.UI_ACCENT.lerp(Cfg.UI_WARN, clampf(alert, 0.0, 1.0))
+
+		draw_rect(Rect2(Vector2.ZERO, size),
+			Cfg.UI_BG.lerp(Color(0.16, 0.03, 0.06), hot * 0.55))
 		# Inner plate, inset from the outer edge.
 		var inset := 14.0
 		draw_rect(Rect2(Vector2(inset, inset), size - Vector2(inset * 2, inset * 2)),
-			Cfg.UI_PANEL)
+			Cfg.UI_PANEL.lerp(Color(0.20, 0.05, 0.08), hot * 0.45))
 		# Bright rule along the playfield edge.
 		var ex := size.x - 2.0 if side < 0 else 0.0
-		draw_rect(Rect2(Vector2(ex, 0), Vector2(2.0, size.y)), Cfg.UI_ACCENT)
+		draw_rect(Rect2(Vector2(ex, 0), Vector2(2.0 + 3.0 * hot, size.y)), accent)
 		var gx := size.x - 8.0 if side < 0 else 2.0
 		draw_rect(Rect2(Vector2(gx, 0), Vector2(6.0, size.y)),
-			Color(Cfg.UI_ACCENT.r, Cfg.UI_ACCENT.g, Cfg.UI_ACCENT.b, 0.12))
+			Color(accent.r, accent.g, accent.b, 0.12 + 0.35 * hot))
+
+		if alert > 0.01:
+			_hazard_stripes(accent, hot)
+			return
+
 		# Ladder ticks for a bit of cabinet texture.
 		var y := 30.0
 		while y < size.y - 30.0:
@@ -289,6 +319,19 @@ class PanelBox:
 			draw_rect(Rect2(Vector2(tx, y), Vector2(10.0, 2.0)),
 				Color(Cfg.UI_LINE.r, Cfg.UI_LINE.g, Cfg.UI_LINE.b, 0.5))
 			y += 40.0
+
+	## Diagonal chevrons scrolling upward along the playfield edge.
+	func _hazard_stripes(accent: Color, hot: float) -> void:
+		var band := 26.0
+		var x := size.x - 34.0 if side < 0 else 14.0
+		var scroll := fmod(pulse * 90.0, band * 2.0)
+		var y := -band * 2.0 + scroll
+		while y < size.y + band:
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(x, y), Vector2(x + 20.0, y - 10.0),
+				Vector2(x + 20.0, y + band - 10.0), Vector2(x, y + band),
+			]), Color(accent.r, accent.g, accent.b, 0.12 + 0.30 * hot))
+			y += band * 2.0
 
 class Bar:
 	extends Control
@@ -346,7 +389,7 @@ class IconRow:
 					c + Vector2(0, -11), c + Vector2(9, 9), c + Vector2(-9, 9),
 				]), col)
 		if count > 8:
-			draw_string(ThemeDB.fallback_font, Vector2(14.0 + 8 * step, 22.0),
+			draw_string(PixelFont.get_font(), Vector2(14.0 + 8 * step, 22.0),
 				"+%d" % (count - 8), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
 
 ## Draws inside the playfield: boss health, stage banners, warnings, messages.
@@ -356,6 +399,7 @@ class FieldOverlay:
 	var message := ""
 	var message_sub := ""
 	var flash := 0.0
+	var alert := 0.0
 
 	var _banner_t := 0.0
 	var _banner_dur := 0.0
@@ -397,7 +441,9 @@ class FieldOverlay:
 		queue_redraw()
 
 	func _draw() -> void:
-		var f := ThemeDB.fallback_font
+		var f := PixelFont.get_font()
+		if alert > 0.01:
+			_vignette()
 		if flash > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, minf(flash, 0.75)))
 		if is_instance_valid(boss) and not boss.dying:
@@ -408,6 +454,24 @@ class FieldOverlay:
 			_draw_warning(f)
 		if message != "":
 			_draw_message(f)
+
+	## Red bloom creeping in from the playfield edges, breathing faster as the
+	## boss weakens. Bands rather than a shader so it costs nothing.
+	func _vignette() -> void:
+		var throb: float = 0.5 + 0.5 * sin(_t * (2.6 + 4.5 * alert))
+		var peak: float = alert * (0.30 + 0.70 * throb)
+		var bands := 9
+		var depth := 70.0 + 40.0 * alert
+		for i in bands:
+			var t := float(i) / float(bands - 1)
+			var a: float = peak * 0.16 * (1.0 - t)
+			var w := depth * (1.0 - t) / float(bands) + 3.0
+			var col := Color(1.0, 0.15, 0.25, a)
+			var off := depth * t / float(bands) * bands / 3.0
+			draw_rect(Rect2(Vector2(off, 0), Vector2(w, size.y)), col)
+			draw_rect(Rect2(Vector2(size.x - off - w, 0), Vector2(w, size.y)), col)
+			draw_rect(Rect2(Vector2(0, off), Vector2(size.x, w)), col)
+			draw_rect(Rect2(Vector2(0, size.y - off - w), Vector2(size.x, w)), col)
 
 	func _draw_boss_bar(f: Font) -> void:
 		var m := 34.0

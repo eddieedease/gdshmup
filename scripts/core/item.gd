@@ -48,7 +48,7 @@ func setup(k: int, pos: Vector2, launch: Vector2) -> void:
 	vel = launch
 	_radius = SIZES[k]
 	_col = COLORS[k]
-	_font = ThemeDB.fallback_font
+	_font = PixelFont.get_font()
 	z_index = Cfg.Z_ITEM
 	value = 500 if k == Kind.STAR else (5000 if k == Kind.BIG_STAR else 0)
 

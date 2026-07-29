@@ -7,6 +7,7 @@ extends Node
 var _current: Node = null
 var _screen := "title"
 var _demo := false
+var _pause_at := -1.0
 
 
 func _ready() -> void:
@@ -48,6 +49,8 @@ func _apply_cli() -> void:
 			GS.boss_rush = true
 		elif arg == "--demo":
 			_demo = true
+		elif arg.begins_with("--pause-at="):
+			_pause_at = float(arg.split("=", true, 1)[1])
 
 
 func _swap(node: Node) -> void:
@@ -83,7 +86,9 @@ func _show_game() -> void:
 	g.finished.connect(func(_cleared): _after_run())
 	_swap(g)
 	if _demo:
-		g.add_child(DemoDriver.new())
+		var d := DemoDriver.new()
+		d.pause_after = _pause_at
+		g.add_child(d)
 
 
 ## A finished run goes to initials entry when it placed, then to the table.

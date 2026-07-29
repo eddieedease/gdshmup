@@ -68,7 +68,7 @@ class Table:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		var f := ThemeDB.fallback_font
+		var f := PixelFont.get_font()
 		var y := 0.0
 		var row_h := 66.0
 

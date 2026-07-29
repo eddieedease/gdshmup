@@ -18,16 +18,16 @@ var _ready_input := 0.25
 func _ready() -> void:
 	build(0)
 
-	label("G D S H M U P", 150.0, 92, Cfg.UI_ACCENT)
-	label("D A N M A K U   A R C A D E", 254.0, 26, Cfg.UI_TEXT)
+	label("G D S H M U P", 150.0, 72, Cfg.UI_ACCENT)
+	label("D A N M A K U   A R C A D E", 236.0, 24, Cfg.UI_TEXT)
 
 	var rule := Rule.new()
-	rule.position = Vector2(Cfg.FIELD_W * 0.22, 306.0)
+	rule.position = Vector2(Cfg.FIELD_W * 0.22, 284.0)
 	rule.size = Vector2(Cfg.FIELD_W * 0.56, 3.0)
 	content.add_child(rule)
 
 	# Top three, so the attract screen always shows something to beat.
-	var y := 336.0
+	var y := 314.0
 	for i in mini(3, GS.scores.size()):
 		var e: Dictionary = GS.scores[i]
 		label("%d.  %s   %s" % [i + 1, String(e.get("name", "---")),
@@ -45,13 +45,14 @@ func _ready() -> void:
 		_item_labels.append(label(ITEMS[i], 520.0 + i * 60.0, 38, Cfg.UI_TEXT))
 
 	_prompt = label("", 720.0, 22, Cfg.UI_DIM)
-	_prompt.text = "W / S  or  ARROWS  to choose      J / ENTER  to confirm"
+	_prompt.text = "W / S  CHOOSE       J / ENTER  CONFIRM"
 
-	label("MOVE  WASD / ARROWS / STICK        SHOT  J        LASER  K        BOMB  SPACE",
-		Cfg.FIELD_H - 150.0, 17, Cfg.UI_DIM)
-	label("HOLD LASER FOR PRECISION MOVEMENT AND A FOCUSED BEAM",
-		Cfg.FIELD_H - 120.0, 17, Cfg.UI_DIM)
-	label("F11  FULLSCREEN", Cfg.FIELD_H - 84.0, 15, Cfg.UI_DIM)
+	label("MOVE  WASD / ARROWS / STICK", Cfg.FIELD_H - 170.0, 16, Cfg.UI_DIM)
+	label("J  SHOT      K  LASER      SPACE  BOMB",
+		Cfg.FIELD_H - 140.0, 16, Cfg.UI_DIM)
+	label("HOLD LASER FOR PRECISION MOVEMENT",
+		Cfg.FIELD_H - 110.0, 16, Cfg.UI_DIM)
+	label("F11  FULLSCREEN     ESC  PAUSE", Cfg.FIELD_H - 78.0, 14, Cfg.UI_DIM)
 
 	_refresh()
 

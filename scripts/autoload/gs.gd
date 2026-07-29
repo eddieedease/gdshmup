@@ -26,6 +26,9 @@ var scores: Array = []
 var hi_score: int = 1_000_000
 var ship_index: int = 0
 var start_level: int = 0
+## Mixer levels, 0..1, adjustable from the pause menu.
+var music_volume: float = 0.75
+var sfx_volume: float = 0.85
 ## Dev switch (`--boss`): skip the waves and fight only the stage bosses.
 var boss_rush: bool = false
 
@@ -125,6 +128,11 @@ func insert_score(name: String, score: int, stage: int, ship: int,
 	return rank
 
 
+## Persists settings changed from the pause menu.
+func save_settings() -> void:
+	_save()
+
+
 func _sync_hi() -> void:
 	hi_score = int(scores[0].score) if not scores.is_empty() else 0
 
@@ -135,7 +143,10 @@ func _save() -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		return
-	f.store_string(JSON.stringify({"scores": scores, "ship": ship_index}))
+	f.store_string(JSON.stringify({
+		"scores": scores, "ship": ship_index,
+		"music": music_volume, "sfx": sfx_volume,
+	}))
 	f.close()
 
 
@@ -149,6 +160,8 @@ func _load() -> void:
 	f.close()
 	if data is Dictionary:
 		ship_index = clampi(int(data.get("ship", 0)), 0, 2)
+		music_volume = clampf(float(data.get("music", music_volume)), 0.0, 1.0)
+		sfx_volume = clampf(float(data.get("sfx", sfx_volume)), 0.0, 1.0)
 		var raw: Variant = data.get("scores", null)
 		if raw is Array and not raw.is_empty():
 			scores = []

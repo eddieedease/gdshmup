@@ -51,10 +51,12 @@ func _ready() -> void:
 	_shot_line = label("", 800.0, 20, Cfg.UI_TEXT)
 	_laser_line = label("", 834.0, 20, Cfg.UI_TEXT)
 
-	label("A / D  or  ARROWS  to choose      J / ENTER  confirm      ESC  back",
-		Cfg.FIELD_H - 140.0, 20, Cfg.UI_DIM)
-	label("SHOT keeps you fast. LASER halves your speed but concentrates damage.",
-		Cfg.FIELD_H - 104.0, 17, Cfg.UI_DIM)
+	label("A / D  CHOOSE     J  CONFIRM     ESC  BACK",
+		Cfg.FIELD_H - 150.0, 18, Cfg.UI_DIM)
+	label("SHOT KEEPS YOU FAST.  LASER HALVES YOUR SPEED",
+		Cfg.FIELD_H - 116.0, 15, Cfg.UI_DIM)
+	label("BUT CONCENTRATES DAMAGE INTO A BEAM.",
+		Cfg.FIELD_H - 92.0, 15, Cfg.UI_DIM)
 
 	_refresh()
 
@@ -101,10 +103,10 @@ func _refresh() -> void:
 	_blurb.text = String(ship.blurb)
 
 	var n: Array = ship.shot_n
-	_shot_line.text = "J  SHOT    %d-way spread  -  %d px/s hull speed" \
+	_shot_line.text = "J  SHOT   %d-WAY   %d PX/S" \
 		% [int(n[n.size() - 1]), int(ship.speed_shot)]
 	var lw: Array = ship.laser_width
-	_laser_line.text = "K  LASER   %d px beam  -  %d px/s focused speed" \
+	_laser_line.text = "K  LASER  %d PX BEAM   %d PX/S" \
 		% [int(lw[lw.size() - 1]), int(ship.speed_laser)]
 
 	_stats.stats = ship.stats
@@ -121,7 +123,7 @@ class StatBlock:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		var f := ThemeDB.fallback_font
+		var f := PixelFont.get_font()
 		var y := 0.0
 		for k in stats:
 			draw_string(f, Vector2(0, y + 18), String(k),

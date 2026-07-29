@@ -27,15 +27,18 @@ var _guard := 0.0   ## Brief invulnerability while a phase transition plays.
 var _spark_cd := 0.0
 
 
-func setup_boss(def: Dictionary, difficulty: Dictionary = {}) -> void:
+## `difficulty` is accepted for symmetry with Enemy but deliberately ignored.
+## Those multipliers exist to scale the reusable enemy archetypes across stages;
+## a boss has hand-authored health and patterns per stage, so compounding the
+## two made stage 3 a 109,000 HP wall - four minutes of holding the trigger.
+func setup_boss(def: Dictionary, _difficulty: Dictionary = {}) -> void:
 	boss_name = String(def.get("name", "BOSS"))
 	phases = def.get("phases", [])
-	var hp_scale := float(difficulty.get("hp", 1.0))
 
 	_phase_hp.resize(phases.size())
 	_total_hp = 0.0
 	for i in phases.size():
-		var h := float(phases[i].get("hp", 500)) * hp_scale
+		var h := float(phases[i].get("hp", 500))
 		_phase_hp[i] = h
 		_total_hp += h
 
@@ -55,7 +58,8 @@ func setup_boss(def: Dictionary, difficulty: Dictionary = {}) -> void:
 	if def.has("tint"):
 		base["tint"] = def.tint
 
-	setup(base, def.get("spawn_at", Vector2(Cfg.FIELD_W * 0.5, -220.0)), difficulty)
+	setup(base, def.get("spawn_at", Vector2(Cfg.FIELD_W * 0.5, -220.0)),
+		{"hp": 1.0, "fire_rate": 1.0, "speed": 1.0})
 	hittable = false
 	_intro = true
 	_intro_t = 0.0

@@ -138,6 +138,7 @@ var _next_voice := 0
 var _last: Dictionary = {}
 var _music: AudioStreamPlayer
 var _laser: AudioStreamPlayer
+var _drone: AudioStreamPlayer
 var _music_key := ""
 var _fade: Tween
 
@@ -163,9 +164,27 @@ func _ready() -> void:
 
 	_laser = AudioStreamPlayer.new()
 	_laser.stream = _laser_stream
-	_laser.volume_db = SFX_DB - 5.0
 	_laser.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_laser)
+
+	_drone = AudioStreamPlayer.new()
+	_drone.stream = _build_drone()
+	_drone.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_drone)
+
+	apply_volumes()
+
+
+## Low menacing bed played under boss fights. `intensity` lifts the pitch as
+## the fight gets more desperate.
+func set_drone(active: bool, intensity: float = 0.0) -> void:
+	if not active or GS.sfx_volume <= 0.001:
+		if _drone.playing:
+			_drone.stop()
+		return
+	_drone.pitch_scale = 1.0 + intensity * 0.30
+	if not _drone.playing:
+		_drone.play()
 
 
 # --- Playback ----------------------------------------------------------------
@@ -181,16 +200,45 @@ func play(name: String, pitch_jitter: float = 0.0, db: float = 0.0) -> void:
 		return
 	_last[name] = now
 
+	if GS.sfx_volume <= 0.001:
+		return
 	var p := _pool[_next_voice]
 	_next_voice = (_next_voice + 1) % _pool.size()
 	p.stream = _bank[name]
 	p.pitch_scale = 1.0 + randf_range(-pitch_jitter, pitch_jitter)
-	p.volume_db = SFX_DB + db
+	p.volume_db = sfx_db(db)
 	p.play()
+
+
+## Mixer helpers. Silence is a hard mute rather than a very small gain, so a
+## slider at zero really is off.
+func sfx_db(extra: float = 0.0) -> float:
+	if GS.sfx_volume <= 0.001:
+		return -80.0
+	return SFX_DB + extra + linear_to_db(GS.sfx_volume)
+
+
+func music_db() -> float:
+	if GS.music_volume <= 0.001:
+		return -80.0
+	return MUSIC_DB + linear_to_db(GS.music_volume)
+
+
+## Re-applies the mixer to anything already playing.
+func apply_volumes() -> void:
+	if _fade == null or not _fade.is_valid():
+		_music.volume_db = music_db()
+	_laser.volume_db = sfx_db(-5.0)
+	_drone.volume_db = sfx_db(-14.0)
+	if GS.sfx_volume <= 0.001:
+		_laser.stop()
 
 
 ## Holds or releases the continuous laser hum.
 func set_laser(active: bool) -> void:
+	if GS.sfx_volume <= 0.001:
+		_laser.stop()
+		return
 	if active and not _laser.playing:
 		_laser.play()
 	elif not active and _laser.playing:
@@ -209,10 +257,10 @@ func play_music(key: String, fade: float = 0.8) -> void:
 	if _fade != null and _fade.is_valid():
 		_fade.kill()
 	_music.stream = stream
-	_music.volume_db = MUSIC_DB - 24.0
+	_music.volume_db = music_db() - 24.0
 	_music.play()
 	_fade = create_tween()
-	_fade.tween_property(_music, "volume_db", MUSIC_DB, fade)
+	_fade.tween_property(_music, "volume_db", music_db(), fade)
 
 
 func stop_music(fade: float = 0.6) -> void:
@@ -223,7 +271,7 @@ func stop_music(fade: float = 0.6) -> void:
 		_music.stop()
 		return
 	_fade = create_tween()
-	_fade.tween_property(_music, "volume_db", MUSIC_DB - 40.0, fade)
+	_fade.tween_property(_music, "volume_db", -80.0, fade)
 	_fade.tween_callback(_music.stop)
 
 
@@ -242,6 +290,16 @@ func _build_laser() -> AudioStreamWAV:
 		"f0": 165.0, "f1": 165.0, "dur": 0.25, "wave": Wave.SAW,
 		"noise": 0.16, "vol": 0.5, "decay": 0.0,
 		"vib": 9.0, "vib_hz": 24.0,
+	})
+	return _to_wav(frames, true)
+
+
+## A slow, detuned throb - two close frequencies beating against each other.
+func _build_drone() -> AudioStreamWAV:
+	var frames := _render({
+		"f0": 54.0, "f1": 54.0, "dur": 1.2, "wave": Wave.SAW,
+		"noise": 0.05, "vol": 0.55, "decay": 0.0,
+		"vib": 1.6, "vib_hz": 3.0,
 	})
 	return _to_wav(frames, true)
 

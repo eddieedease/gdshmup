@@ -90,7 +90,7 @@ static func _colossus() -> Dictionary:
 		"anchor": Vector2(Cfg.FIELD_W * 0.5, 240.0),
 		"phases": [
 			{
-				"hp": 7000,
+				"hp": 4000,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 240.0),
 					"amp_x": 230.0, "amp_y": 35.0, "freq_x": 0.85, "freq_y": 1.4},
 				"attacks": [
@@ -103,7 +103,7 @@ static func _colossus() -> Dictionary:
 				],
 			},
 			{
-				"hp": 8000,
+				"hp": 4400,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 225.0),
 					"amp_x": 265.0, "amp_y": 70.0, "freq_x": 1.25, "freq_y": 1.9},
 				"attacks": [
@@ -117,7 +117,7 @@ static func _colossus() -> Dictionary:
 				],
 			},
 			{
-				"hp": 9000,
+				"hp": 4800,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 250.0),
 					"amp_x": 200.0, "amp_y": 90.0, "freq_x": 1.6, "freq_y": 2.4},
 				"attacks": [
@@ -149,7 +149,7 @@ static func _omega() -> Dictionary:
 		"anchor": Vector2(Cfg.FIELD_W * 0.5, 255.0),
 		"phases": [
 			{
-				"hp": 9000,
+				"hp": 4800,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 255.0),
 					"amp_x": 235.0, "amp_y": 50.0, "freq_x": 0.95, "freq_y": 1.6},
 				"attacks": [
@@ -162,7 +162,7 @@ static func _omega() -> Dictionary:
 				],
 			},
 			{
-				"hp": 10000,
+				"hp": 5200,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 235.0),
 					"amp_x": 270.0, "amp_y": 80.0, "freq_x": 1.4, "freq_y": 2.2},
 				"attacks": [
@@ -175,7 +175,7 @@ static func _omega() -> Dictionary:
 				],
 			},
 			{
-				"hp": 11000,
+				"hp": 5600,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 250.0),
 					"amp_x": 210.0, "amp_y": 95.0, "freq_x": 1.75, "freq_y": 2.6},
 				"attacks": [
@@ -191,7 +191,7 @@ static func _omega() -> Dictionary:
 				],
 			},
 			{
-				"hp": 12000,
+				"hp": 6000,
 				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 260.0),
 					"amp_x": 245.0, "amp_y": 60.0, "freq_x": 2.1, "freq_y": 3.0},
 				"attacks": [

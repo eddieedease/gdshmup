@@ -5,7 +5,11 @@ extends Node
 ##
 ## Not part of the game loop - Main only creates this when the flag is present.
 
+## When >= 0, taps pause once at this many seconds in (for capturing the menu).
+var pause_after := -1.0
+
 var _t := 0.0
+var _paused_once := false
 
 
 func _ready() -> void:
@@ -14,6 +18,12 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
+	if pause_after >= 0.0 and not _paused_once and _t >= pause_after:
+		_paused_once = true
+		Input.action_press("p_pause")
+		await get_tree().process_frame
+		Input.action_release("p_pause")
+		return
 
 	# Alternate weapons every few seconds so both are exercised.
 	var laser := fmod(_t, 6.0) > 3.0

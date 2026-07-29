@@ -41,6 +41,8 @@ var _next_extend := 0
 var _field_base := Vector2.ZERO
 var _paused := false
 var _shutting_down := false
+var _pause_menu: PauseMenu
+var _boss: Boss = null
 
 
 func _ready() -> void:
@@ -108,6 +110,11 @@ func _build() -> void:
 	_director = Director.new()
 	_director.game = self
 
+	_pause_menu = PauseMenu.new()
+	add_child(_pause_menu)
+	_pause_menu.resume_requested.connect(func(): toggle_pause())
+	_pause_menu.quit_requested.connect(quit_to_title)
+
 	var watcher := PauseWatcher.new()
 	watcher.game = self
 	watcher.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -125,12 +132,42 @@ func _build() -> void:
 	_director.wants_warning.connect(func():
 		_hud.warning()
 		AU.play("warning"))
-	_director.boss_spawned.connect(func(b): _hud.set_boss(b))
-	_director.boss_cleared.connect(func(): _hud.set_boss(null))
+	_director.boss_spawned.connect(_on_boss_spawned)
+	_director.boss_cleared.connect(_on_boss_cleared)
 
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_next_extend = 0
+
+
+# --- Boss presentation -------------------------------------------------------
+
+func _on_boss_spawned(b: Boss) -> void:
+	_boss = b
+	_hud.set_boss(b)
+	b.phase_changed.connect(func(_i):
+		_hud.flash(0.45)
+		_shake = maxf(_shake, 12.0))
+
+
+func _on_boss_cleared() -> void:
+	_boss = null
+	_hud.set_boss(null)
+	AU.set_drone(false)
+
+
+## Ramps the alert dressing with the boss's remaining health, so the fight
+## visibly and audibly tightens as it goes.
+func _update_boss_mood() -> void:
+	if not is_instance_valid(_boss) or _boss.dying:
+		if _boss != null:
+			AU.set_drone(false)
+			_hud.set_alert(0.0)
+			_boss = null
+		return
+	var pressure: float = 1.0 - _boss.hp_fraction()
+	_hud.set_alert(0.35 + 0.65 * pressure)
+	AU.set_drone(true, pressure)
 
 
 func _layout() -> void:
@@ -158,8 +195,11 @@ func shutdown() -> void:
 	if _paused:
 		_paused = false
 		get_tree().paused = false
+	AU.set_drone(false)
+	AU.set_laser(false)
 	_field.visible = false
 	_hud.visible = false
+	_pause_menu.visible = false
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 
@@ -216,6 +256,7 @@ func _game_over() -> void:
 	over = true
 	_director.stop()
 	AU.stop_music(1.2)
+	AU.set_drone(false)
 	_hud.set_message("GAME OVER", "PRESS START TO RETURN")
 	await get_tree().create_timer(1.0, false).timeout
 	_finish()
@@ -366,6 +407,7 @@ func _add_score(n: int) -> void:
 # --- Frame -------------------------------------------------------------------
 
 func _process(dt: float) -> void:
+	_update_boss_mood()
 	_prune_enemies()
 	_check_collisions()
 	_update_items(dt)
@@ -468,15 +510,18 @@ func toggle_pause() -> void:
 	get_tree().paused = _paused
 	if _paused:
 		AU.set_laser(false)
-		_hud.set_message("PAUSED", "ESC TO RESUME")
+		AU.set_drone(false)
+		_pause_menu.open()
 	else:
-		_hud.set_message("")
+		_pause_menu.close()
 
 
 func quit_to_title() -> void:
 	if _paused:
 		_paused = false
 		get_tree().paused = false
+		_pause_menu.close()
+	AU.set_drone(false)
 	over = true
 	_director.stop()
 	GS.last_run_score = score
@@ -487,20 +532,13 @@ func quit_to_title() -> void:
 
 
 ## Runs outside the pause tree so ESC still reaches the game while frozen.
+## Only opens the menu; the menu handles its own navigation and closing.
 class PauseWatcher:
 	extends Node
 	var game: Game
-	var _held := 0.0
 
-	func _process(dt: float) -> void:
-		if game == null or game.over:
+	func _process(_dt: float) -> void:
+		if game == null or game.over or game._paused:
 			return
 		if Input.is_action_just_pressed("p_pause"):
 			game.toggle_pause()
-		# Holding ESC while paused abandons the run.
-		if game._paused and Input.is_action_pressed("p_back"):
-			_held += dt
-			if _held > 1.0:
-				game.quit_to_title()
-		else:
-			_held = 0.0
