@@ -264,6 +264,7 @@ func _on_enemy_hit(enemy: Node2D, bullet: Bullet) -> void:
 
 
 func _on_beam_tick(enemy: Node2D, damage: float, at: Vector2) -> void:
+	AU.play("hit", 0.1)
 	enemy.take_damage(damage, at)
 	_touch_chain()
 

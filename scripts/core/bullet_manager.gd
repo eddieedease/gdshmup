@@ -57,6 +57,8 @@ func spawn(pos: Vector2, heading: float, speed: float, style: String,
 	b.rotation = heading + Bullet.ART_OFFSET
 	b.modulate = color
 	_style(b, style, scale_mul)
+	b.base_scale = b.scale
+	b.base_color = color
 	_live.append(b)
 	return b
 

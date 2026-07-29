@@ -363,6 +363,8 @@ class FieldOverlay:
 	var _banner_sub := ""
 	var _warn_t := 0.0
 	var _t := 0.0
+	## Trails the real health so recent damage shows as a draining ghost bar.
+	var _ghost := 1.0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -382,6 +384,14 @@ class FieldOverlay:
 			_banner_t += dt
 		if _warn_t > 0.0:
 			_warn_t -= dt
+		if is_instance_valid(boss):
+			var frac := boss.hp_fraction()
+			if frac > _ghost:
+				_ghost = frac          # New boss or new phase: snap up.
+			else:
+				_ghost = maxf(frac, _ghost - dt * 0.22)
+		else:
+			_ghost = 1.0
 		if flash > 0.0:
 			flash = maxf(0.0, flash - dt * 2.6)
 		queue_redraw()
@@ -405,6 +415,9 @@ class FieldOverlay:
 		var y := 26.0
 		var frac := boss.hp_fraction()
 		draw_rect(Rect2(Vector2(m, y), Vector2(w, 16)), Color(0, 0, 0, 0.55))
+		# Ghost first, so the lit bar draws over it and the gap is the damage.
+		draw_rect(Rect2(Vector2(m, y), Vector2(w * _ghost, 16)),
+			Color(1.0, 0.45, 0.35, 0.75))
 		var col := Cfg.UI_WARN if frac < 0.3 else Cfg.UI_GOLD
 		draw_rect(Rect2(Vector2(m, y), Vector2(w * frac, 16)), col)
 		draw_rect(Rect2(Vector2(m, y), Vector2(w, 16)), Color(1, 1, 1, 0.4), false, 2.0)

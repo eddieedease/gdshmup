@@ -12,6 +12,14 @@ signal damaged(enemy: Enemy, amount: float)
 
 const DEG := PI / 180.0
 
+## Hit flash: how long it lasts and how far toward white it pushes.
+const FLASH_TIME := 0.09
+const FLASH_GAIN := 2.4
+## A held laser deals damage every frame; without this gate the flash would be
+## permanently refreshed and the target would sit solid white. Re-arming only
+## once the flash has mostly decayed turns sustained fire into a hot strobe.
+const FLASH_REARM := 0.45
+
 var spec: Dictionary = {}
 var alive := true
 var hittable := true
@@ -279,13 +287,18 @@ func _step_visual(dt: float) -> void:
 		_:
 			_sprite.rotation = 0.0
 
-	_bank = Art.bank_row(signf(vel.x) if absf(vel.x) > 40.0 else 0.0)
+	# The hull is drawn nose-down, so its banked poses are mirrored relative to
+	# screen direction: moving right on screen is a left bank in art space.
+	_bank = Art.bank_row(-signf(vel.x) if absf(vel.x) > 40.0 else 0.0)
 	_sprite.frame = _bank * 2 + (int(age * 12.0) % 2)
 
 	if _flash > 0.0:
 		_flash -= dt
-		var k: float = clampf(_flash / 0.07, 0.0, 1.0)
-		_sprite.modulate = Color(1, 1, 1, 1).lerp(_base_tint(), 1.0 - k)
+		# Additive, not a lerp toward white: most enemies are already tinted
+		# white, so blending toward it produced no visible flash at all.
+		var k: float = clampf(_flash / FLASH_TIME, 0.0, 1.0) * FLASH_GAIN
+		var b := _base_tint()
+		_sprite.modulate = Color(b.r + k, b.g + k, b.b + k, b.a)
 		if _flash <= 0.0:
 			_sprite.modulate = _base_tint()
 
@@ -298,7 +311,8 @@ func take_damage(amount: float, at: Vector2 = Vector2.ZERO) -> void:
 	if not alive or not hittable:
 		return
 	hp -= amount
-	_flash = 0.07
+	if _flash <= FLASH_TIME * FLASH_REARM:
+		_flash = FLASH_TIME
 	damaged.emit(self, amount)
 	if hp <= 0.0:
 		_die(at)

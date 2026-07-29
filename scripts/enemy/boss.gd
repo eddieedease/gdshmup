@@ -24,6 +24,7 @@ var _intro := true
 var _intro_t := 0.0
 var _death_t := 0.0
 var _guard := 0.0   ## Brief invulnerability while a phase transition plays.
+var _spark_cd := 0.0
 
 
 func setup_boss(def: Dictionary, difficulty: Dictionary = {}) -> void:
@@ -85,6 +86,8 @@ func _process(dt: float) -> void:
 			hittable = true
 			_enter_phase(0)
 		return
+	if _spark_cd > 0.0:
+		_spark_cd -= dt
 	if _guard > 0.0:
 		_guard -= dt
 		hittable = _guard <= 0.0
@@ -120,7 +123,13 @@ func take_damage(amount: float, at: Vector2 = Vector2.ZERO) -> void:
 	if dying or _intro or not hittable:
 		return
 	hp -= amount
-	_flash = 0.07
+	if _flash <= FLASH_TIME * FLASH_REARM:
+		_flash = FLASH_TIME
+	# A hull this big needs impact sparks, not just a tint change.
+	if _spark_cd <= 0.0:
+		_spark_cd = 0.05
+		fx.spark(at if at != Vector2.ZERO else position,
+			Color(1, 0.92, 0.7), 0.20)
 	damaged.emit(self, amount)
 	if hp <= 0.0:
 		if phase + 1 < phases.size():

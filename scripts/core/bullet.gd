@@ -11,6 +11,12 @@ extends Sprite2D
 ## rotation offset by a quarter turn.
 const ART_OFFSET := PI * 0.5
 
+## Every bullet breathes: scale and brightness oscillate so projectiles read as
+## live energy and stay visible against the scrolling ground.
+const PULSE_RATE := 9.5
+const PULSE_SCALE := 0.13
+const PULSE_BRIGHT := 0.26
+
 var alive := false
 
 var dir := 0.0          ## Heading in radians.
@@ -50,6 +56,12 @@ var frames := 1
 var grazed := false
 var scored := false     ## Marks bullets already converted by a bomb.
 
+## Pulse state. `base_scale`/`base_color` are the values the pulse modulates
+## around, set once at spawn.
+var base_scale := Vector2.ONE
+var base_color := Color.WHITE
+var pulse_phase := 0.0
+
 
 func reset() -> void:
 	alive = true
@@ -74,6 +86,9 @@ func reset() -> void:
 	scored = false
 	modulate = Color.WHITE
 	rotation = 0.0
+	# Random phase: a synchronised pulse across hundreds of bullets reads as a
+	# strobe, while staggered phases read as a shimmering swarm.
+	pulse_phase = randf() * TAU
 	if not hits.is_empty():
 		hits.clear()
 	visible = true
@@ -82,6 +97,16 @@ func reset() -> void:
 func kill() -> void:
 	alive = false
 	visible = false
+
+
+## Breathing scale and brightness applied every frame, so a bullet stays
+## legible against busy terrain even when it is not moving relative to the eye.
+func _apply_pulse(alpha: float) -> void:
+	var k := sin(age * PULSE_RATE + pulse_phase)
+	scale = base_scale * (1.0 + PULSE_SCALE * k)
+	var b := 1.0 + PULSE_BRIGHT * k
+	modulate = Color(base_color.r * b, base_color.g * b, base_color.b * b,
+		base_color.a * alpha)
 
 
 ## Integrates one frame. Returns false when the bullet should be recycled.
@@ -95,14 +120,12 @@ func step(dt: float, target: Vector2) -> bool:
 
 	if delay > 0.0:
 		delay -= dt
-		# Pulse while held so the player can read the incoming shot.
-		var k := 0.65 + 0.35 * sin(age * 22.0)
-		modulate.a = k
+		# Flash harder while held, so the player can read the incoming shot.
+		_apply_pulse(0.55 + 0.45 * sin(age * 22.0))
 		if face_dir:
 			rotation = dir + ART_OFFSET
 		return true
-	elif modulate.a < 1.0:
-		modulate.a = minf(1.0, modulate.a + dt * 6.0)
+	_apply_pulse(1.0)
 
 	if homing_time > 0.0 and homing > 0.0:
 		homing_time -= dt
