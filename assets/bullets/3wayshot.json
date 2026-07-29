@@ -1,0 +1,20 @@
+{
+  "name": "projectiles-spread-16bit-lost-wizard-64.",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "cols": 2,
+  "rows": 1,
+  "frameCount": 2,
+  "fps": 12,
+  "clips": [
+    {
+      "name": "Pulse",
+      "frames": [
+        0,
+        1
+      ],
+      "fps": 12
+    }
+  ],
+  "note": "Frames are laid out row-major, left to right, top to bottom. Clip frame numbers index into that order."
+}

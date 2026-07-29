@@ -1,0 +1,22 @@
+{
+  "name": "projectiles-laser-16bit-iron-wisp-60.",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "cols": 4,
+  "rows": 1,
+  "frameCount": 4,
+  "fps": 16,
+  "clips": [
+    {
+      "name": "Beam flow",
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "fps": 16
+    }
+  ],
+  "note": "Frames are laid out row-major, left to right, top to bottom. Clip frame numbers index into that order."
+}

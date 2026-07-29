@@ -1,0 +1,21 @@
+{
+  "name": "projectiles-muzzle-16bit-mega-wisp-80.",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "cols": 3,
+  "rows": 1,
+  "frameCount": 3,
+  "fps": 18,
+  "clips": [
+    {
+      "name": "Flash",
+      "frames": [
+        0,
+        1,
+        2
+      ],
+      "fps": 18
+    }
+  ],
+  "note": "Frames are laid out row-major, left to right, top to bottom. Clip frame numbers index into that order."
+}
