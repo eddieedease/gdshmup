@@ -118,7 +118,7 @@ func _build() -> void:
 	_ebm.player_grazed.connect(_on_graze)
 	_ebm.bullet_cleared.connect(_on_bullet_cleared)
 	_pbm.enemy_hit.connect(_on_enemy_hit)
-	_player.beam_tick.connect(_on_beam_tick)
+	_player.damage_dealt.connect(_on_damage_dealt)
 	_player.life_lost.connect(_on_life_lost)
 	_player.bomb_fired.connect(_on_bomb)
 	_director.wants_banner.connect(func(t, s, d): _hud.banner(t, s, d))
@@ -203,7 +203,6 @@ func _all_clear() -> void:
 	over = true
 	_director.stop()
 	_ebm.clear_all(false)
-	GS.submit_score(score)
 	AU.stop_music(1.5)
 	AU.play("stage_clear")
 	_hud.set_message("ALL CLEAR", "FINAL SCORE  %s" % Cfg.fmt_score(score))
@@ -216,7 +215,6 @@ func _game_over() -> void:
 		return
 	over = true
 	_director.stop()
-	GS.submit_score(score)
 	AU.stop_music(1.2)
 	_hud.set_message("GAME OVER", "PRESS START TO RETURN")
 	await get_tree().create_timer(1.0, false).timeout
@@ -231,6 +229,7 @@ func _finish() -> void:
 	GS.last_run_score = score
 	GS.last_run_stage = stage
 	GS.last_run_cleared = cleared
+	GS.last_run_ship = _player.ship_index
 	finished.emit(cleared)
 
 
@@ -263,7 +262,7 @@ func _on_enemy_hit(enemy: Node2D, bullet: Bullet) -> void:
 	_touch_chain()
 
 
-func _on_beam_tick(enemy: Node2D, damage: float, at: Vector2) -> void:
+func _on_damage_dealt(enemy: Node2D, damage: float, at: Vector2) -> void:
 	AU.play("hit", 0.1)
 	enemy.take_damage(damage, at)
 	_touch_chain()
@@ -480,10 +479,10 @@ func quit_to_title() -> void:
 		get_tree().paused = false
 	over = true
 	_director.stop()
-	GS.submit_score(score)
 	GS.last_run_score = score
 	GS.last_run_stage = stage
 	GS.last_run_cleared = false
+	GS.last_run_ship = _player.ship_index
 	finished.emit(false)
 
 

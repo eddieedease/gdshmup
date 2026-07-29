@@ -155,7 +155,12 @@ func _update_player_team(dt: float) -> void:
 		var b: Bullet = _live[i]
 		var keep := b.step(dt, _nearest_enemy(b.position))
 		if keep:
-			for e in enemies:
+			# Reverse index: enemy_hit can kill the target, which erases it
+			# from `enemies` while we are still walking the array.
+			var j := enemies.size() - 1
+			while j >= 0:
+				var e = enemies[j]
+				j -= 1
 				if not e.alive or not e.hittable:
 					continue
 				var rr: float = e.hit_radius + b.radius

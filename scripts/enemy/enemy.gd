@@ -12,6 +12,11 @@ signal damaged(enemy: Enemy, amount: float)
 
 const DEG := PI / 180.0
 
+## Positional movers ("sway", "arc") derive position straight from `age`, so at
+## age 0 they would snap to their curve. Easing in from the spawn point over
+## this window keeps entries - and boss phase changes - continuous.
+const MOVE_BLEND := 0.55
+
 ## Hit flash: how long it lasts and how far toward white it pushes.
 const FLASH_TIME := 0.09
 const FLASH_GAIN := 2.4
@@ -173,7 +178,7 @@ func _step_move(dt: float) -> void:
 			var w := float(m.get("omega", 1.1))
 			var cx: Vector2 = m.get("centre", Vector2(Cfg.FIELD_W * 0.5, 260.0))
 			var a3 := float(m.get("phase", 0.0)) * DEG + age * w
-			var np2 := cx + Vector2.from_angle(a3) * r
+			var np2 := _blend_in(cx + Vector2.from_angle(a3) * r)
 			vel = (np2 - position) / maxf(dt, 0.0001)
 			position = np2
 
@@ -185,7 +190,8 @@ func _step_move(dt: float) -> void:
 			var ay := float(m.get("amp_y", 60.0))
 			var wx := float(m.get("freq_x", 0.75))
 			var wy := float(m.get("freq_y", 1.3))
-			var np3 := c + Vector2(sin(age * wx) * ax, sin(age * wy) * ay)
+			var np3 := _blend_in(
+				c + Vector2(sin(age * wx) * ax, sin(age * wy) * ay))
 			vel = (np3 - position) / maxf(dt, 0.0001)
 			position = np3
 
@@ -204,6 +210,15 @@ func _step_move(dt: float) -> void:
 
 		"static":
 			vel = Vector2.ZERO
+
+
+## Eases a directly-computed position out from `_start` so movers that jump to
+## a curve at age 0 glide into it instead of teleporting.
+func _blend_in(target: Vector2) -> Vector2:
+	if age >= MOVE_BLEND:
+		return target
+	var t := age / MOVE_BLEND
+	return _start.lerp(target, t * t * (3.0 - 2.0 * t))
 
 
 func _step_path(dt: float) -> void:

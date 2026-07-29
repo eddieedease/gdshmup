@@ -5,7 +5,24 @@ extends Node
 ## bindings live next to the game logic and stay readable/diffable.
 
 const SAVE_PATH := "user://gdshmup.save"
+const TABLE_SIZE := 8
 
+## Seeded so a fresh install still has something to beat, the way a cabinet
+## ships with factory scores.
+const DEFAULT_TABLE := [
+	{"name": "ACE", "score": 1_000_000, "stage": 2, "ship": 0, "cleared": true},
+	{"name": "GDS", "score": 780_000, "stage": 2, "ship": 1, "cleared": false},
+	{"name": "ZAP", "score": 620_000, "stage": 2, "ship": 2, "cleared": false},
+	{"name": "NEO", "score": 480_000, "stage": 1, "ship": 0, "cleared": false},
+	{"name": "VIC", "score": 350_000, "stage": 1, "ship": 1, "cleared": false},
+	{"name": "RAY", "score": 240_000, "stage": 1, "ship": 2, "cleared": false},
+	{"name": "SHM", "score": 150_000, "stage": 0, "ship": 0, "cleared": false},
+	{"name": "CAV", "score": 80_000, "stage": 0, "ship": 1, "cleared": false},
+]
+
+## Ranking table, always sorted descending and capped at TABLE_SIZE.
+var scores: Array = []
+## Mirrors scores[0] so the HUD and title can read it directly.
 var hi_score: int = 1_000_000
 var ship_index: int = 0
 var start_level: int = 0
@@ -16,6 +33,9 @@ var boss_rush: bool = false
 var last_run_score: int = 0
 var last_run_stage: int = 0
 var last_run_cleared: bool = false
+var last_run_ship: int = 0
+## Rank just earned, or -1 when the run did not place.
+var last_run_rank: int = -1
 
 
 ## Screenshot support: F12 saves to user://, or `--shot=PATH --shot-at=FRAME`
@@ -29,6 +49,7 @@ var _frames := 0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_input_map()
+	scores = DEFAULT_TABLE.duplicate(true)
 	_load()
 	for arg in OS.get_cmdline_user_args() + OS.get_cmdline_args():
 		if arg.begins_with("--shot="):
@@ -68,10 +89,44 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-func submit_score(score: int) -> void:
-	if score > hi_score:
-		hi_score = score
-		_save()
+## True when `score` is good enough to earn a place in the table.
+func qualifies(score: int) -> bool:
+	if score <= 0:
+		return false
+	return scores.size() < TABLE_SIZE or score > int(scores[-1].score)
+
+
+## The rank `score` would take. Used to show "2ND PLACE" during initials entry,
+## before the entry actually exists.
+## A tie ranks *below* the existing entry, so the earlier run keeps its spot.
+func provisional_rank(score: int) -> int:
+	for i in scores.size():
+		if score > int(scores[i].score):
+			return i
+	return scores.size()
+
+
+## Inserts a run and returns its rank (0-based), or -1 if it did not place.
+func insert_score(name: String, score: int, stage: int, ship: int,
+		cleared: bool) -> int:
+	if not qualifies(score):
+		return -1
+	var clean := name.strip_edges().substr(0, 3).to_upper()
+	var entry := {
+		"name": clean if clean != "" else "AAA",
+		"score": score, "stage": stage, "ship": ship, "cleared": cleared,
+	}
+	var rank := provisional_rank(score)
+	scores.insert(rank, entry)
+	if scores.size() > TABLE_SIZE:
+		scores.resize(TABLE_SIZE)
+	_sync_hi()
+	_save()
+	return rank
+
+
+func _sync_hi() -> void:
+	hi_score = int(scores[0].score) if not scores.is_empty() else 0
 
 
 # --- Persistence -------------------------------------------------------------
@@ -80,7 +135,7 @@ func _save() -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		return
-	f.store_string(JSON.stringify({"hi_score": hi_score, "ship": ship_index}))
+	f.store_string(JSON.stringify({"scores": scores, "ship": ship_index}))
 	f.close()
 
 
@@ -93,8 +148,29 @@ func _load() -> void:
 	var data: Variant = JSON.parse_string(f.get_as_text())
 	f.close()
 	if data is Dictionary:
-		hi_score = int(data.get("hi_score", hi_score))
 		ship_index = clampi(int(data.get("ship", 0)), 0, 2)
+		var raw: Variant = data.get("scores", null)
+		if raw is Array and not raw.is_empty():
+			scores = []
+			for e in raw:
+				if e is Dictionary and e.has("score"):
+					scores.append({
+						"name": String(e.get("name", "AAA")),
+						"score": int(e.get("score", 0)),
+						"stage": int(e.get("stage", 0)),
+						"ship": int(e.get("ship", 0)),
+						"cleared": bool(e.get("cleared", false)),
+					})
+			scores.sort_custom(func(a, b): return a.score > b.score)
+			if scores.size() > TABLE_SIZE:
+				scores.resize(TABLE_SIZE)
+		elif data.has("hi_score"):
+			# Migrate a save from before the ranking table existed.
+			var old := int(data.hi_score)
+			if old > int(scores[0].score):
+				scores[0] = {"name": "YOU", "score": old, "stage": 0,
+					"ship": 0, "cleared": false}
+	_sync_hi()
 
 
 # --- Input map ---------------------------------------------------------------

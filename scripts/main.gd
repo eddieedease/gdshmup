@@ -17,13 +17,19 @@ func _ready() -> void:
 			_show_game()
 		"select":
 			_show_select()
+		"ranking":
+			_show_ranking(2, false)
+		"name":
+			GS.last_run_score = 1_234_500
+			GS.last_run_stage = 1
+			_after_run()
 		_:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 			_show_title()
 
 
 ## Dev switches, passed after `--`:
-##   --screen=title|select|game   start on a given screen
+##   --screen=title|select|game|ranking|name   start on a given screen
 ##   --stage=N                    begin at stage N (1-3)
 ##   --ship=N                     preselect ship N (1-3)
 ##   --boss                       boss rush: skip the waves in every stage
@@ -60,6 +66,7 @@ func _show_title() -> void:
 	AU.play_music("title")
 	var t := TitleScreen.new()
 	t.start_pressed.connect(_show_select)
+	t.ranking_pressed.connect(func(): _show_ranking(-1, false))
 	t.quit_pressed.connect(func(): get_tree().quit())
 	_swap(t)
 
@@ -73,7 +80,32 @@ func _show_select() -> void:
 
 func _show_game() -> void:
 	var g := Game.new()
-	g.finished.connect(func(_cleared): _show_title())
+	g.finished.connect(func(_cleared): _after_run())
 	_swap(g)
 	if _demo:
 		g.add_child(DemoDriver.new())
+
+
+## A finished run goes to initials entry when it placed, then to the table.
+func _after_run() -> void:
+	AU.play_music("title")
+	GS.last_run_rank = -1
+	if GS.qualifies(GS.last_run_score):
+		var n := NameEntry.new()
+		n.rank = GS.provisional_rank(GS.last_run_score)
+		n.score = GS.last_run_score
+		n.submitted.connect(func(initials: String):
+			GS.last_run_rank = GS.insert_score(initials, GS.last_run_score,
+				GS.last_run_stage, GS.last_run_ship, GS.last_run_cleared)
+			_show_ranking(GS.last_run_rank, true))
+		_swap(n)
+	else:
+		_show_ranking(-1, true)
+
+
+func _show_ranking(highlight: int, auto: bool) -> void:
+	var r := Ranking.new()
+	r.highlight = highlight
+	r.auto_advance = auto
+	r.done.connect(_show_title)
+	_swap(r)

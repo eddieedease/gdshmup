@@ -3,9 +3,10 @@ extends Cabinet
 ## Attract screen: logo, menu, hi-score and the result of the last run.
 
 signal start_pressed()
+signal ranking_pressed()
 signal quit_pressed()
 
-const ITEMS := ["START GAME", "QUIT"]
+const ITEMS := ["START GAME", "RANKING", "QUIT"]
 
 var _sel := 0
 var _item_labels: Array[Label] = []
@@ -25,18 +26,25 @@ func _ready() -> void:
 	rule.size = Vector2(Cfg.FIELD_W * 0.56, 3.0)
 	content.add_child(rule)
 
-	label("HI-SCORE   %s" % Cfg.fmt_score(GS.hi_score), 340.0, 28, Cfg.UI_GOLD)
+	# Top three, so the attract screen always shows something to beat.
+	var y := 336.0
+	for i in mini(3, GS.scores.size()):
+		var e: Dictionary = GS.scores[i]
+		label("%d.  %s   %s" % [i + 1, String(e.get("name", "---")),
+			Cfg.fmt_score(int(e.get("score", 0)))], y, 24,
+			Cfg.UI_GOLD if i == 0 else Cfg.UI_DIM)
+		y += 32.0
 
 	if GS.last_run_score > 0:
 		var res := "ALL CLEAR" if GS.last_run_cleared \
 			else "REACHED STAGE %d" % (GS.last_run_stage + 1)
 		label("LAST RUN   %s   -   %s"
-			% [Cfg.fmt_score(GS.last_run_score), res], 384.0, 20, Cfg.UI_DIM)
+			% [Cfg.fmt_score(GS.last_run_score), res], y + 12.0, 19, Cfg.UI_DIM)
 
 	for i in ITEMS.size():
-		_item_labels.append(label(ITEMS[i], 500.0 + i * 62.0, 40, Cfg.UI_TEXT))
+		_item_labels.append(label(ITEMS[i], 520.0 + i * 60.0, 38, Cfg.UI_TEXT))
 
-	_prompt = label("", 700.0, 22, Cfg.UI_DIM)
+	_prompt = label("", 720.0, 22, Cfg.UI_DIM)
 	_prompt.text = "W / S  or  ARROWS  to choose      J / ENTER  to confirm"
 
 	label("MOVE  WASD / ARROWS / STICK        SHOT  J        LASER  K        BOMB  SPACE",
@@ -65,10 +73,13 @@ func _process(dt: float) -> void:
 		_refresh()
 	if Input.is_action_just_pressed("p_start"):
 		AU.play("menu_select")
-		if _sel == 0:
-			start_pressed.emit()
-		else:
-			quit_pressed.emit()
+		match _sel:
+			0:
+				start_pressed.emit()
+			1:
+				ranking_pressed.emit()
+			_:
+				quit_pressed.emit()
 
 	# Pulse the highlighted entry.
 	var k := 0.72 + 0.28 * absf(sin(_time * 4.5))

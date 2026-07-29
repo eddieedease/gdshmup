@@ -10,7 +10,7 @@ extends Node2D
 
 signal life_lost
 signal bomb_fired
-signal beam_tick(enemy: Node2D, damage: float, at: Vector2)
+signal damage_dealt(enemy: Node2D, amount: float, at: Vector2)
 
 enum State { ALIVE, DYING, RESPAWNING }
 
@@ -18,6 +18,8 @@ const RESPAWN_DELAY := 0.85
 const INVULN_TIME := 2.6
 const BOMB_TIME := 2.3
 const BOMB_INVULN := 0.6
+## Damage per second applied to everything on screen while a bomb burns.
+const BOMB_DPS := 300.0
 const DEATH_POWER_LOSS := 1
 
 ## Above this line every item on screen is magnetised, rewarding aggression.
@@ -33,7 +35,6 @@ var state: int = State.ALIVE
 
 var invuln := 0.0
 var bomb_time := 0.0
-var bomb_radius := 0.0
 
 var laser_held := false
 var shot_held := false
@@ -274,14 +275,19 @@ func _fire_laser(dt: float) -> void:
 
 func _damage_column(x: float, y: float, half_w: float, dmg: float, dt: float) -> void:
 	var hw := half_w * 0.5 + 6.0
-	for e in enemies:
+	# Reverse index: damaging an enemy can kill it, which erases it from
+	# `enemies` mid-loop, and a forward iterator would then skip its neighbour.
+	var i := enemies.size() - 1
+	while i >= 0:
+		var e = enemies[i]
+		i -= 1
 		if not e.alive or not e.hittable:
 			continue
 		if e.position.y > y:
 			continue
 		if absf(e.position.x - x) > hw + e.hit_radius:
 			continue
-		beam_tick.emit(e, dmg, Vector2(x, e.position.y))
+		damage_dealt.emit(e, dmg, Vector2(x, e.position.y))
 		if _beam_spark_cd <= 0.0:
 			fx.spark(Vector2(x, e.position.y + e.hit_radius * 0.5),
 				colour.lightened(0.4), 0.13)
@@ -296,8 +302,10 @@ func _try_bomb() -> void:
 		return
 	bombs -= 1
 	bomb_time = BOMB_TIME
-	bomb_radius = 0.0
 	invuln = maxf(invuln, BOMB_TIME + BOMB_INVULN)
+	# Wipe the screen the instant it goes off - a bomb is a panic button, so
+	# it has to pay out immediately rather than as an expanding front.
+	bullets.clear_all(true)
 	fx.shockwave(position, 520.0, colour, 0.7, 16.0)
 	fx.shockwave(position, 900.0, Color(1, 1, 1, 0.9), 1.0, 9.0)
 	fx.explode(position, 2.2, colour)
@@ -309,8 +317,15 @@ func _update_bomb(dt: float) -> void:
 	if bomb_time <= 0.0:
 		return
 	bomb_time -= dt
-	bomb_radius = minf(bomb_radius + 2600.0 * dt, 1600.0)
-	bullets.clear_radius(position, bomb_radius, true)
+	# Keep suppressing fire for the whole burn, so anything an enemy launches
+	# mid-bomb is swallowed too and the window is genuinely safe.
+	bullets.clear_all(true)
+	var i := enemies.size() - 1
+	while i >= 0:
+		var e = enemies[i]
+		i -= 1
+		if e.alive and e.hittable:
+			damage_dealt.emit(e, BOMB_DPS * dt, e.position)
 	if randf() < dt * 14.0:
 		fx.explode(position + Vector2(randf_range(-260, 260), randf_range(-420, 180)),
 			1.2, colour.lightened(0.2))
