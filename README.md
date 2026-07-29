@@ -57,6 +57,21 @@ storyboard, so new waves are a few lines in `scripts/levels/`.
 Sound effects have no source assets — they are synthesised as 16-bit PCM at
 startup from the table in `scripts/autoload/audio.gd`.
 
+### Asset orientation
+
+The sprite sheets are not consistently oriented and the `.json` sidecars are not
+a reliable guide: the player ships are drawn nose-**up**, every enemy sheet is
+drawn nose-**down**, and the "bank left"/"bank right" clip labels are swapped
+relative to the pixels. `tools/orientation_probe.gd` derives the true facing by
+diffing the two thrust frames of a row — the pixels that change are the exhaust
+flame, so their vertical position locates the tail:
+
+```
+godot --headless --path . --script res://tools/orientation_probe.gd
+```
+
+Re-run it if new ship sheets are added.
+
 ## Dev switches
 
 Pass after `--`:

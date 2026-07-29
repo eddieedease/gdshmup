@@ -265,9 +265,11 @@ func _step_attacks(dt: float) -> void:
 # --- Visuals / damage --------------------------------------------------------
 
 func _step_visual(dt: float) -> void:
+	# Enemy art is authored nose-down already (see tools/orientation_probe.gd),
+	# so "down" needs no rotation and forward is +Y, i.e. an art angle of +PI/2.
 	match _face:
 		"down":
-			_sprite.rotation = PI
+			_sprite.rotation = 0.0
 		"vel":
 			if vel.length_squared() > 1.0:
 				_sprite.rotation = vel.angle() - PI * 0.5
@@ -275,9 +277,9 @@ func _step_visual(dt: float) -> void:
 			if is_instance_valid(player):
 				_sprite.rotation = (player.position - position).angle() - PI * 0.5
 		_:
-			_sprite.rotation = PI
+			_sprite.rotation = 0.0
 
-	_bank = Art.bank_row(-signf(vel.x) if absf(vel.x) > 40.0 else 0.0)
+	_bank = Art.bank_row(signf(vel.x) if absf(vel.x) > 40.0 else 0.0)
 	_sprite.frame = _bank * 2 + (int(age * 12.0) % 2)
 
 	if _flash > 0.0:

@@ -120,15 +120,18 @@ func _process(dt: float) -> void:
 		_decor[i].position.y = _decor_y[i]
 
 
+## The ship flies north, so the ground has to travel *down* the screen: tile Y
+## increases with `_scroll`, and the world row index counts backwards as new
+## ground arrives over the top edge.
 func _refresh() -> void:
-	var first := floori((_scroll - TILE) / TILE)
+	var first := floori((-_scroll - TILE) / TILE)
 	for k in ROWS:
 		var r := first + k
 		var slot := posmod(r, ROWS)
 		if _row_id[slot] != r:
 			_row_id[slot] = r
 			_fill_row(slot, r)
-		var y := float(r) * TILE - _scroll + TILE * 0.5
+		var y := float(r) * TILE + _scroll + TILE * 0.5
 		for c in COLS:
 			_tiles[slot * COLS + c].position = Vector2(TILE * (c + 0.5), y)
 
@@ -154,3 +157,7 @@ func _fill_row(slot: int, world_row: int) -> void:
 
 func stage_name() -> String:
 	return String(_palette.name)
+
+
+func stage_tint() -> Color:
+	return _palette.tint

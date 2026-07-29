@@ -27,6 +27,8 @@ var lives_left := 2
 
 var _field: Node2D
 var _terrain: Terrain
+var _dust: SpeedDust
+var _dust_near: SpeedDust
 var _fx: FxLayer
 var _ebm: BulletManager
 var _pbm: BulletManager
@@ -61,6 +63,12 @@ func _build() -> void:
 	wash.z_index = Cfg.Z_DECOR
 	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_field.add_child(wash)
+
+	_dust = SpeedDust.new()
+	_field.add_child(_dust)
+	_dust_near = SpeedDust.new()
+	_dust_near.foreground = true
+	_field.add_child(_dust_near)
 
 	_fx = FxLayer.new()
 	_field.add_child(_fx)
@@ -159,6 +167,9 @@ func _run_stages() -> void:
 	while stage < LevelDefs.count() and not over:
 		var meta := LevelDefs.meta(stage)
 		_terrain.set_stage(int(meta.terrain), 1000 + stage * 977)
+		for d in [_dust, _dust_near]:
+			d.speed = _terrain.speed * 1.7
+			d.tint = _terrain.stage_tint().lightened(0.45)
 		AU.play_music("level%d" % (stage + 1))
 		_director.difficulty = meta.difficulty
 		_hud.set_stage(stage, LevelDefs.count(), String(meta.name))

@@ -48,6 +48,7 @@ var _sprite: Sprite2D
 var _beam: Beam
 var _shield: Sprite2D
 var _hitbox: Node2D
+var _trail: EngineTrail
 var _options: Array[OptionBit] = []
 var _shot_cd := 0.0
 var _opt_cd := 0.0
@@ -85,6 +86,11 @@ func setup(index: int) -> void:
 	_hitbox = HitboxDot.new()
 	_hitbox.z_index = 3
 	add_child(_hitbox)
+
+	_trail = EngineTrail.new()
+	_trail.colour = colour
+	_trail.z_index = -3
+	add_child(_trail)
 
 	position = Vector2(Cfg.FIELD_W * 0.5, Cfg.FIELD_H - 170.0)
 	invuln = INVULN_TIME
@@ -362,6 +368,46 @@ func _update_visuals(_dt: float) -> void:
 	_hitbox.visible = is_focused()
 	if _hitbox.visible:
 		_hitbox.queue_redraw()
+	_trail.visible = _sprite.visible
+	if _trail.visible:
+		# A shorter, tighter plume while focused sells the speed difference.
+		_trail.push(position, 0.45 if laser_held else 1.0)
+
+
+## Twin exhaust plumes trailing the thrusters. The points are stored in
+## playfield space and converted on draw, so hard turns smear the trail
+## sideways instead of rigidly following the hull.
+class EngineTrail:
+	extends Node2D
+	const MAX_POINTS := 16
+	const NOZZLES := [-9.0, 9.0]
+
+	var colour := Color.WHITE
+	var _pts: Array[Vector2] = []
+	var _origin := Vector2.ZERO
+	var _intensity := 1.0
+
+	func push(world_pos: Vector2, intensity: float) -> void:
+		_origin = world_pos
+		_intensity = lerpf(_intensity, intensity, 0.2)
+		_pts.push_front(world_pos)
+		if _pts.size() > MAX_POINTS:
+			_pts.resize(MAX_POINTS)
+		queue_redraw()
+
+	func _draw() -> void:
+		if _pts.size() < 2:
+			return
+		var n := _pts.size()
+		for nozzle in NOZZLES:
+			for i in range(n - 1):
+				var t := float(i) / float(n - 1)
+				var fade: float = (1.0 - t) * (1.0 - t) * 0.55 * _intensity
+				var w: float = lerpf(5.0, 1.0, t) * _intensity
+				var off := Vector2(nozzle, 16.0)
+				draw_line(
+					_pts[i] - _origin + off, _pts[i + 1] - _origin + off,
+					Color(colour.r, colour.g, colour.b, fade), w, true)
 
 
 ## The tiny focus dot that shows the real hitbox while the laser is held.

@@ -33,13 +33,17 @@ func build(terrain_stage: int) -> void:
 	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	field.add_child(wash)
 
+	var dust := SpeedDust.new()
+	dust.speed = terrain.speed * 1.7
+	dust.tint = terrain.stage_tint().lightened(0.45)
+	field.add_child(dust)
+
 	# Idle traffic: a few ships drifting through the backdrop.
 	for i in 5:
 		var s := Sprite2D.new()
 		s.centered = true
 		Art.apply_ship(s, Art.ENEMIES[i % Art.ENEMIES.size()])
 		s.frame = 2
-		s.rotation = PI
 		s.scale = Vector2.ONE * randf_range(0.16, 0.30)
 		s.modulate = Color(1, 1, 1, 0.22)
 		s.z_index = Cfg.Z_DECOR + 1
