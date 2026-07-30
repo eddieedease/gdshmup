@@ -7,9 +7,12 @@ extends Node
 
 ## When >= 0, taps pause once at this many seconds in (for capturing the menu).
 var pause_after := -1.0
+## When >= 0, fills the hyper meter once at this many seconds in.
+var hyper_after := -1.0
 
 var _t := 0.0
 var _paused_once := false
+var _hypered_once := false
 
 
 func _ready() -> void:
@@ -25,6 +28,11 @@ func _process(dt: float) -> void:
 		Input.action_release("p_pause")
 		return
 
+	var host := get_parent() as Game
+	if hyper_after >= 0.0 and not _hypered_once and _t >= hyper_after and host:
+		_hypered_once = true
+		host._player.add_charge(1.0)
+
 	# Alternate weapons every few seconds so both are exercised.
 	var laser := fmod(_t, 6.0) > 3.0
 	_hold("p_laser", laser)
@@ -34,7 +42,6 @@ func _process(dt: float) -> void:
 	var x := sin(_t * 0.9)
 	_hold("p_left", x < -0.2)
 	_hold("p_right", x > 0.2)
-	var host := get_parent() as Game
 	var y: float = host._player.position.y if host != null else 800.0
 	_hold("p_up", y > 880.0)
 	_hold("p_down", y < 700.0)

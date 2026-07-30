@@ -51,7 +51,9 @@ const HYPER_ABSORB_RADIUS := 190.0
 const HYPER_FIRE_BOOST := 0.62   ## Cooldown multiplier: lower is faster.
 const HYPER_ABSORB_SCORE := 400
 
-const EXTEND_SCORES := [1_500_000, 4_000_000, 8_000_000, 14_000_000, 22_000_000]
+## First threshold is deliberately low enough to land around the stage 2 boss;
+## the stage 2 and 4 bosses also drop a 1UP outright (BossDefs.drop_extend).
+const EXTEND_SCORES := [800_000, 2_500_000, 6_000_000, 11_000_000, 18_000_000]
 
 # --- Palette -----------------------------------------------------------------
 

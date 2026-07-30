@@ -92,6 +92,7 @@ static func _colossus() -> Dictionary:
 		"radius": 86.0,
 		"score": 250_000,
 		"anchor": Vector2(Cfg.FIELD_W * 0.5, 240.0),
+		"drop_extend": true,
 		"phases": [
 			{
 				"hp": 4000,
@@ -229,6 +230,7 @@ static func _harbinger() -> Dictionary:
 		"radius": 90.0,
 		"score": 700_000,
 		"anchor": Vector2(Cfg.FIELD_W * 0.5, 250.0),
+		"drop_extend": true,
 		# Built around the new vocabulary: unfurling rings, scatter carriers and
 		# sniper tells, so it plays unlike the first three bosses.
 		"phases": [

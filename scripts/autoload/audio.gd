@@ -12,6 +12,11 @@ const POOL := 24           ## Simultaneous effect voices.
 const MUSIC_DB := -9.0
 const SFX_DB := -7.0
 
+## Every track starts with roughly this much silence. Skipped on both the
+## initial play and the loop point, so a stage never opens (or re-opens) on a
+## dead couple of seconds. Adjust if a future track has a different lead-in.
+const MUSIC_INTRO_SKIP := 2.0
+
 enum Wave { SINE, SQUARE, SAW, TRI, NOISE }
 
 ## name -> array of segments played back to back. Segment keys:
@@ -266,11 +271,13 @@ func play_music(key: String, fade: float = 0.8) -> void:
 		return
 	if stream is AudioStreamMP3:
 		stream.loop = true
+		# Loop back past the silence too, not just skip it on the first play.
+		stream.loop_offset = MUSIC_INTRO_SKIP
 	if _fade != null and _fade.is_valid():
 		_fade.kill()
 	_music.stream = stream
 	_music.volume_db = music_db() - 24.0
-	_music.play()
+	_music.play(MUSIC_INTRO_SKIP)
 	_fade = create_tween()
 	_fade.tween_property(_music, "volume_db", music_db(), fade)
 

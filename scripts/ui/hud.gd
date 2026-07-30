@@ -15,6 +15,7 @@ var _root: Control
 var _left: PanelBox
 var _right: PanelBox
 var _overlay: FieldOverlay
+var _sparks: ChargeSparks
 var _font: Font
 
 # Left column.
@@ -62,6 +63,10 @@ func _ready() -> void:
 	_overlay = FieldOverlay.new()
 	_root.add_child(_overlay)
 
+	_sparks = ChargeSparks.new()
+	_sparks.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(_sparks)
+
 	_build_left()
 	_build_right()
 
@@ -72,6 +77,7 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	_t += dt
 	_overlay.tick(dt)
+	_sparks.tick(dt)
 	if _alert > 0.0 or _left.alert > 0.0:
 		_left.alert = _alert
 		_right.alert = _alert
@@ -187,6 +193,9 @@ func _layout() -> void:
 	_stack(_right, rw, [
 		["ShipCap", 26.0], [_l_ship_code, 26.0], [_l_ship_name, 46.0],
 	], 46.0)
+	# Sparks home on the middle of the hyper meter, in screen space.
+	_sparks.target = _right.position + _hyper_bar.position \
+		+ Vector2(_hyper_bar.size.x * 0.5, 12.0)
 	_ship_icon.position = Vector2(PAD + rw * 0.5, 250.0)
 	_ship_icon.scale = Vector2.ONE * 0.30
 	_stack(_right, rw, [
@@ -279,6 +288,12 @@ func set_status(power: int, lives: int, bombs: int, graze: int,
 	_l_bullets.text = "%d BULLETS" % bullet_count
 
 
+## Emits a mote that drifts from `from` (screen space) into the hyper meter.
+## Purely cosmetic: it visualises where the charge from a kill went.
+func charge_spark(from: Vector2, tint: Color = Color(1.0, 0.5, 0.9)) -> void:
+	_sparks.emit_spark(from, tint)
+
+
 func banner(title: String, subtitle: String, duration: float) -> void:
 	_overlay.show_banner(title, subtitle, duration)
 
@@ -299,6 +314,11 @@ func set_message(text: String, sub: String = "") -> void:
 
 ## Boss alert dressing, 0 = off. Drives the pulsing sidebars and the red
 ## vignette; the game raises it as the boss loses health.
+## Shows the hyper callout for as long as hyper is up.
+func set_hyper_active(active: bool) -> void:
+	_overlay.hyper = active
+
+
 func set_alert(level: float) -> void:
 	_alert = clampf(level, 0.0, 1.0)
 	_overlay.alert = _alert
@@ -442,6 +462,62 @@ class IconRow:
 			draw_string(PixelFont.get_font(), Vector2(14.0 + 8 * step, 22.0),
 				"+%d" % (count - 8), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
 
+## Motes that travel from a kill to the hyper meter. Deliberately faint and
+## small - it is a hint about where charge comes from, not a fireworks display.
+class ChargeSparks:
+	extends Control
+	const POOL := 48
+	const LIFE := 0.55
+
+	var target := Vector2(1600, 600)
+
+	var _from: PackedVector2Array = PackedVector2Array()
+	var _age: PackedFloat32Array = PackedFloat32Array()
+	var _bow: PackedFloat32Array = PackedFloat32Array()
+	var _col: PackedColorArray = PackedColorArray()
+	var _next := 0
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_from.resize(POOL)
+		_age.resize(POOL)
+		_bow.resize(POOL)
+		_col.resize(POOL)
+		for i in POOL:
+			_age[i] = LIFE + 1.0   # Start expired.
+
+	func emit_spark(from: Vector2, tint: Color) -> void:
+		_from[_next] = from
+		_age[_next] = 0.0
+		# Sideways bow so a burst of sparks fans out instead of overlapping.
+		_bow[_next] = randf_range(-90.0, 90.0)
+		_col[_next] = tint
+		_next = (_next + 1) % POOL
+
+	func tick(dt: float) -> void:
+		var busy := false
+		for i in POOL:
+			if _age[i] <= LIFE:
+				_age[i] += dt
+				busy = true
+		if busy:
+			queue_redraw()
+
+	func _draw() -> void:
+		for i in POOL:
+			var t: float = _age[i] / LIFE
+			if t >= 1.0:
+				continue
+			# Ease out, with a perpendicular bow that flattens on arrival.
+			var e: float = 1.0 - pow(1.0 - t, 2.2)
+			var p: Vector2 = _from[i].lerp(target, e)
+			p += Vector2(0, -1).rotated(
+				(target - _from[i]).angle()) * _bow[i] * sin(e * PI)
+			var c: Color = _col[i]
+			c.a = (1.0 - t) * 0.7
+			draw_circle(p, lerpf(3.2, 1.2, t), c)
+
+
 ## Draws inside the playfield: boss health, stage banners, warnings, messages.
 class FieldOverlay:
 	extends Control
@@ -450,6 +526,7 @@ class FieldOverlay:
 	var message_sub := ""
 	var flash := 0.0
 	var alert := 0.0
+	var hyper := false
 
 	var _banner_t := 0.0
 	var _banner_dur := 0.0
@@ -502,6 +579,8 @@ class FieldOverlay:
 			_draw_banner(f)
 		if _warn_t > 0.0:
 			_draw_warning(f)
+		if hyper:
+			_draw_hyper(f)
 		if message != "":
 			_draw_message(f)
 
@@ -564,6 +643,18 @@ class FieldOverlay:
 			Color(0.5, 0.0, 0.1, 0.28 * a))
 		_centre(f, "!! WARNING !!", cy - 8, 62, Color(1, 0.3, 0.35, a))
 		_centre(f, "LARGE CRAFT APPROACHING", cy + 44, 26, Color(1, 0.85, 0.85, a))
+
+	## Big, brief and unmistakable: hyper is the one state worth shouting about.
+	func _draw_hyper(f: Font) -> void:
+		var pulse: float = 0.55 + 0.45 * absf(sin(_t * 9.0))
+		var cy := size.y * 0.26
+		# Bands top and bottom rather than a full wash, so the field stays clear.
+		var band := Color(1.0, 0.45, 0.85, 0.10 + 0.10 * pulse)
+		draw_rect(Rect2(Vector2(0, cy - 62.0), Vector2(size.x, 118.0)), band)
+		_centre(f, "H Y P E R !", cy, 56,
+			Color(1.0, 0.70, 0.95, 0.75 + 0.25 * pulse))
+		_centre(f, "KISS THE BULLETS!", cy + 42.0, 26,
+			Color(1.0, 0.90, 0.98, 0.65 + 0.35 * pulse))
 
 	func _draw_message(f: Font) -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))

@@ -24,7 +24,7 @@ const PALETTES := [
 			[0.32, "dirt"], [0.58, "stone"],
 		],
 		"decor": ["wood", "stone"],
-		"speed": 92.0,
+		"speed": 132.0,
 	},
 	{
 		"name": "SCORCHED FLATS",
@@ -34,7 +34,7 @@ const PALETTES := [
 			[0.38, "dirt"], [0.64, "swamp"],
 		],
 		"decor": ["cobble", "stone"],
-		"speed": 118.0,
+		"speed": 168.0,
 	},
 	{
 		"name": "GLACIER CORE",
@@ -44,7 +44,7 @@ const PALETTES := [
 			[0.46, "cobble"], [0.70, "wood"],
 		],
 		"decor": ["stone", "wood"],
-		"speed": 148.0,
+		"speed": 208.0,
 	},
 	# Stages 4 and 5 leave the ground behind. There is no space art in the
 	# asset pack, so `space` swaps the tile grid for a procedural starfield and
@@ -56,7 +56,7 @@ const PALETTES := [
 		"nebula": [Color(0.10, 0.16, 0.40), Color(0.24, 0.12, 0.38)],
 		"bands": [],
 		"decor": ["stone", "cobble"],
-		"speed": 168.0,
+		"speed": 236.0,
 	},
 	{
 		"name": "VOID CORE",
@@ -65,7 +65,7 @@ const PALETTES := [
 		"nebula": [Color(0.30, 0.05, 0.18), Color(0.12, 0.04, 0.26)],
 		"bands": [],
 		"decor": ["stone", "wood"],
-		"speed": 196.0,
+		"speed": 272.0,
 	},
 ]
 
@@ -76,7 +76,7 @@ const STAR_LAYERS := [
 	[26, 1.25, 2.4, 0.90],
 ]
 
-var speed := 92.0
+var speed := 132.0
 
 var _tiles: Array[Sprite2D] = []
 var _row_id: PackedInt32Array = PackedInt32Array()

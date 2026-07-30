@@ -55,6 +55,7 @@ func setup_boss(def: Dictionary, _difficulty: Dictionary = {}) -> void:
 		"move": {"type": "approach", "to": def.get("anchor",
 			Vector2(Cfg.FIELD_W * 0.5, 260.0)), "time": INTRO_TIME},
 		"attacks": [],
+		"drop_extend": bool(def.get("drop_extend", false)),
 	}
 	if def.has("tint"):
 		base["tint"] = def.tint

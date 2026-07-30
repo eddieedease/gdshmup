@@ -10,13 +10,16 @@ extends Node2D
 ## can be layered in front of the action for the closest, fastest motes.
 
 ## [speed multiplier, length multiplier, width, alpha]
+## Long, thin and fast. Uniform-alpha dashes read as falling rain; these are
+## drawn as tapered quads with a bright head and a tail that fades to nothing,
+## which is what makes them read as motion blur instead of weather.
 const BANDS := [
-	[0.55, 0.5, 1.0, 0.10],
-	[1.05, 1.0, 1.5, 0.16],
-	[1.9, 1.9, 2.0, 0.22],
+	[0.9, 1.5, 1.0, 0.13],
+	[1.7, 2.6, 1.6, 0.20],
+	[3.0, 4.2, 2.2, 0.28],
 ]
 
-const COUNT := 150
+const COUNT := 110
 
 ## Base fall speed, kept in step with the terrain so the layers agree.
 var speed := 120.0
@@ -39,7 +42,7 @@ func _ready() -> void:
 		_band[i] = i % BANDS.size()
 		_x[i] = _spawn_x()
 		_y[i] = randf_range(-Cfg.FIELD_H, Cfg.FIELD_H)
-		_len[i] = randf_range(9.0, 26.0)
+		_len[i] = randf_range(26.0, 64.0)
 
 
 ## Streaks cluster toward the edges, leaving the middle of the field - where
@@ -56,17 +59,34 @@ func _process(dt: float) -> void:
 		if _y[i] > Cfg.FIELD_H + 40.0:
 			_y[i] = randf_range(-140.0, -20.0)
 			_x[i] = randf_range(0.0, Cfg.FIELD_W)
-			_len[i] = randf_range(9.0, 26.0)
+			_len[i] = randf_range(26.0, 64.0)
 	queue_redraw()
 
 
 func _draw() -> void:
 	# Faster travel stretches every streak, so acceleration is visible.
 	var stretch: float = clampf(speed / 110.0, 0.6, 2.4)
+	var pts := PackedVector2Array()
+	pts.resize(4)
+	var cols := PackedColorArray()
+	cols.resize(4)
+
 	for i in COUNT:
 		var band: Array = BANDS[_band[i]]
 		var l: float = _len[i] * float(band[1]) * stretch
 		var a: float = float(band[3]) * (0.45 if foreground else 1.0)
-		draw_line(
-			Vector2(_x[i], _y[i]), Vector2(_x[i], _y[i] + l),
-			Color(tint.r, tint.g, tint.b, a), float(band[2]), false)
+		var hw: float = float(band[2]) * 0.5
+		var x := _x[i]
+		var y := _y[i]
+
+		# Travelling downward, so the head is the lower end. The tail vertices
+		# are fully transparent, giving a free gradient with no shader.
+		pts[0] = Vector2(x - hw * 0.35, y)
+		pts[1] = Vector2(x + hw * 0.35, y)
+		pts[2] = Vector2(x + hw, y + l)
+		pts[3] = Vector2(x - hw, y + l)
+		cols[0] = Color(tint.r, tint.g, tint.b, 0.0)
+		cols[1] = cols[0]
+		cols[2] = Color(tint.r, tint.g, tint.b, a)
+		cols[3] = cols[2]
+		draw_polygon(pts, cols)

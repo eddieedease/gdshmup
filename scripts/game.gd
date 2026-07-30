@@ -325,6 +325,9 @@ func _on_enemy_died(e: Enemy) -> void:
 		_fx.popup(e.position, Cfg.fmt_score(gained), Cfg.UI_GOLD, 24)
 	_shake = maxf(_shake, clampf(e.score / 3000.0, 0.6, 9.0))
 	_spawn_on_death(e)
+	# Visualise the charge this kill fed into the meter.
+	if not _player.is_hyper():
+		_hud.charge_spark(e.position + _field.position)
 	_drop_for(e)
 
 
@@ -366,6 +369,10 @@ func _drop_for(e: Enemy) -> void:
 			pass
 
 	if e is Boss:
+		# Bosses flagged in BossDefs hand out a spare ship, so a competent run
+		# is reliably up a life by the mid-game rather than waiting on score.
+		if bool(e.spec.get("drop_extend", false)):
+			_spawn_item(Item.Kind.EXTEND, p, Vector2(0, -240))
 		for i in 12:
 			_spawn_item(Item.Kind.BIG_STAR, p,
 				Vector2(randf_range(-260, 260), randf_range(-260, -60)))
@@ -458,6 +465,7 @@ func _process(dt: float) -> void:
 	_hud.set_status(_player.power, maxi(lives_left, 0), _player.bombs, graze,
 		_ebm.live_count())
 	_hud.set_hyper(_player.hyper_charge, _player.is_hyper())
+	_hud.set_hyper_active(_player.is_hyper())
 	_hud.set_power_progress(_player.chip_fraction())
 
 
