@@ -26,6 +26,10 @@ extends RefCounted
 ##   homing_time how long homing lasts
 ##   scale       art scale multiplier
 ##   life        seconds before self-destruct
+##   payload     for "scatter": the volley a carrier leaves when it bursts
+##
+## Reserved by the Enemy attack scheduler, not by patterns: `start`, `interval`,
+## `count`, `burst`, `burst_gap`, `until`, `time_scale`, `flash`, `ox`, `oy`.
 
 const DEG := PI / 180.0
 
@@ -409,15 +413,19 @@ static func _helix(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
 			b.wave_phase = 0.0 if i == 0 else PI
 
 
-## Fat slow carriers that burst into a ring partway down the screen. The `burst`
-## sub-dictionary is the volley they leave behind.
+## Fat slow carriers that burst into a ring partway down the screen. `payload`
+## is the volley they leave behind.
+##
+## Note the key is deliberately NOT called "burst": the attack scheduler in
+## Enemy._step_attacks reads `burst` as an integer sub-shot count, and a
+## dictionary there crashes it.
 static func _scatter(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
 		target: Vector2) -> void:
 	var n := int(s.get("n", 3))
 	var spread := float(s.get("spread", 50.0)) * DEG
 	var spd := float(s.get("speed", 210.0))
 	var a := _base_angle(s, origin, idx, target)
-	var payload: Dictionary = s.get("burst", {
+	var payload: Dictionary = s.get("payload", {
 		"pattern": "ring", "n": 8, "speed": 200.0, "style": "small",
 		"color": String(s.get("color", "pink")), "aim": false,
 	})

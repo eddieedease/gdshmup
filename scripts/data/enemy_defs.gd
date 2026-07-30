@@ -189,7 +189,7 @@ const TYPES := {
 			"pattern": "scatter", "n": 3, "spread": 46.0, "speed": 205.0,
 			"fuse": 1.1, "style": "seed", "color": "pink",
 			"start": 1.3, "interval": 2.4,
-			"burst": {"pattern": "ring", "n": 9, "speed": 205.0,
+			"payload": {"pattern": "ring", "n": 9, "speed": 205.0,
 				"style": "small", "color": "pink", "aim": false},
 		}],
 		"drop": "power",

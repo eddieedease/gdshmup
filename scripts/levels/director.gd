@@ -22,6 +22,10 @@ signal wants_warning()
 signal boss_spawned(boss: Boss)
 signal boss_cleared()
 
+## How often the blocking waits re-check. Short enough that the next wave starts
+## the moment the field frees up, rather than up to a sixth of a second later.
+const POLL := 0.08
+
 var game: Node = null            ## The game scene; provides add_enemy().
 var difficulty: Dictionary = {"hp": 1.0, "fire_rate": 1.0, "speed": 1.0}
 var stopped := false
@@ -44,24 +48,36 @@ func wait(seconds: float) -> void:
 	await _tree().create_timer(seconds, false).timeout
 
 
-## Blocks until every spawned enemy is gone (or `timeout` elapses).
+## Enemies that still matter for pacing: alive and not yet past the bottom edge.
+## An enemy that has swept off screen is no longer a threat, but it lingers in
+## the array until the cull margin catches it - waiting on those was what left
+## multi-second holes between waves.
+func _threat_count() -> int:
+	var n := 0
+	for e in game.enemies:
+		if is_instance_valid(e) and e.alive and e.position.y < Cfg.FIELD_H + 30.0:
+			n += 1
+	return n
+
+
+## Blocks until the field is clear of threats (or `timeout` elapses).
 func wait_clear(timeout: float = 26.0) -> void:
 	var elapsed := 0.0
 	while not stopped and elapsed < timeout:
-		if game.enemies.is_empty():
+		if _threat_count() == 0:
 			return
-		await _tree().create_timer(0.15, false).timeout
-		elapsed += 0.15
+		await _tree().create_timer(POLL, false).timeout
+		elapsed += POLL
 
 
-## Blocks until fewer than `n` enemies remain.
+## Blocks until fewer than `n` threats remain on screen.
 func wait_until_under(n: int, timeout: float = 20.0) -> void:
 	var elapsed := 0.0
 	while not stopped and elapsed < timeout:
-		if game.enemies.size() < n:
+		if _threat_count() < n:
 			return
-		await _tree().create_timer(0.15, false).timeout
-		elapsed += 0.15
+		await _tree().create_timer(POLL, false).timeout
+		elapsed += POLL
 
 
 # --- Spawning ----------------------------------------------------------------

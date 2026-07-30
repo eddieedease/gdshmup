@@ -95,7 +95,7 @@ func run(d: Director) -> void:
 	# 8. Warden escort with sniper support.
 	d.banner("", "DEBRIS FIELD SENTINEL", 2.0)
 	d.one("WARDEN", Vector2(W * 0.5, Cfg.SPAWN_Y), {
-		"hp": 1300,
+		"hp": 900,
 		"move": {"type": "enter_hold_exit", "enter": 1.6, "hold": 15.0,
 			"hold_at": Vector2(W * 0.5, 240.0), "exit_dir": 90.0,
 			"exit_speed": 240.0, "bob": 22.0},

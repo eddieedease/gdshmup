@@ -307,7 +307,10 @@ func _step_attacks(dt: float) -> void:
 			fx.muzzle(origin, PI * 0.5, Cfg.color_of(String(a.get("color", "pink"))), 0.12)
 
 		a._idx += 1
-		var burst := int(a.get("burst", 1))
+		# Guard the type: a pattern key that happens to share this name would
+		# otherwise take the whole enemy down mid-wave.
+		var burst_raw: Variant = a.get("burst", 1)
+		var burst: int = int(burst_raw) if (burst_raw is int or burst_raw is float) else 1
 		var gap: float
 		if burst > 1 and (a._idx % burst) != 0:
 			gap = float(a.get("burst_gap", 0.08))

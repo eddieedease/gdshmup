@@ -114,7 +114,7 @@ func run(d: Director) -> void:
 	# 8. Twin wardens, one per side, with entirely different arsenals.
 	d.banner("", "VOID GATE WARDENS", 2.2)
 	d.one("WARDEN", Vector2(W * 0.27, Cfg.SPAWN_Y), {
-		"hp": 1500,
+		"hp": 800,
 		"move": {"type": "enter_hold_exit", "enter": 1.6, "hold": 18.0,
 			"hold_at": Vector2(W * 0.27, 245.0), "exit_dir": 90.0,
 			"exit_speed": 245.0, "bob": 22.0},
@@ -128,7 +128,7 @@ func run(d: Director) -> void:
 		],
 	})
 	d.one("WARDEN", Vector2(W * 0.73, Cfg.SPAWN_Y), {
-		"hp": 1500,
+		"hp": 800,
 		"move": {"type": "enter_hold_exit", "enter": 2.0, "hold": 18.0,
 			"hold_at": Vector2(W * 0.73, 245.0), "exit_dir": 90.0,
 			"exit_speed": 245.0, "bob": 22.0},
@@ -136,7 +136,7 @@ func run(d: Director) -> void:
 			{"pattern": "scatter", "n": 3, "spread": 60.0, "speed": 200.0,
 				"fuse": 1.0, "style": "seed", "color": "pink",
 				"start": 2.0, "interval": 2.6,
-				"burst": {"pattern": "ring", "n": 10, "speed": 215.0,
+				"payload": {"pattern": "ring", "n": 10, "speed": 215.0,
 					"style": "small", "color": "pink", "aim": false}},
 			{"pattern": "petal", "n": 12, "speed": 220.0, "curve": -58.0,
 				"style": "small", "color": "teal", "start": 3.4,

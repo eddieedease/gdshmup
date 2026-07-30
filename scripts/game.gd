@@ -12,6 +12,9 @@ const CHAIN_MULT_CAP := 6.0
 const GRAZE_SCORE := 60
 const CLEARED_BULLET_SCORE := 120
 const STAR_DROP_CHANCE := 0.06
+## Hyper absorb feedback.
+const ABSORB_COL := Color(1.0, 0.55, 0.95)
+const ABSORB_POPUP_EVERY := 6
 
 var enemies: Array = []
 var items: Array[Item] = []
@@ -41,6 +44,7 @@ var _next_extend := 0
 var _field_base := Vector2.ZERO
 var _paused := false
 var _shutting_down := false
+var _absorbed := 0
 var _pause_menu: PauseMenu
 var _boss: Boss = null
 
@@ -129,6 +133,7 @@ func _build() -> void:
 	_player.damage_dealt.connect(_on_damage_dealt)
 	_player.life_lost.connect(_on_life_lost)
 	_player.bomb_fired.connect(_on_bomb)
+	_player.hyper_ended.connect(func(): _absorbed = 0)
 	_player.hyper_started.connect(func():
 		_hud.flash(0.35)
 		_shake = maxf(_shake, 8.0)
@@ -395,8 +400,21 @@ func _on_graze(_b: Bullet) -> void:
 
 
 func _on_bullet_cleared(pos: Vector2) -> void:
-	_add_score(Cfg.HYPER_ABSORB_SCORE if _player.is_hyper()
-		else CLEARED_BULLET_SCORE)
+	if _player.is_hyper():
+		# Absorbing has to *feel* like scoring, not like bullets vanishing:
+		# a spark where it died, a mote flying to the meter, and a running
+		# total called out every few so the numbers are legible.
+		_add_score(Cfg.HYPER_ABSORB_SCORE)
+		_absorbed += 1
+		_fx.spark(pos, ABSORB_COL, 0.11)
+		_hud.charge_spark(pos + _field.position, ABSORB_COL)
+		if _absorbed % ABSORB_POPUP_EVERY == 0:
+			_fx.popup(pos, "+%s" % Cfg.fmt_score(
+				Cfg.HYPER_ABSORB_SCORE * ABSORB_POPUP_EVERY), ABSORB_COL, 22)
+			_hud.flash(0.12)
+		return
+
+	_add_score(CLEARED_BULLET_SCORE)
 	if randf() < STAR_DROP_CHANCE:
 		_spawn_item(Item.Kind.STAR, pos, Vector2(randf_range(-60, 60), -60))
 

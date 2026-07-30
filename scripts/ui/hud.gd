@@ -193,9 +193,6 @@ func _layout() -> void:
 	_stack(_right, rw, [
 		["ShipCap", 26.0], [_l_ship_code, 26.0], [_l_ship_name, 46.0],
 	], 46.0)
-	# Sparks home on the middle of the hyper meter, in screen space.
-	_sparks.target = _right.position + _hyper_bar.position \
-		+ Vector2(_hyper_bar.size.x * 0.5, 12.0)
 	_ship_icon.position = Vector2(PAD + rw * 0.5, 250.0)
 	_ship_icon.scale = Vector2.ONE * 0.30
 	_stack(_right, rw, [
@@ -205,6 +202,11 @@ func _layout() -> void:
 		["HyperCap", 26.0], [_hyper_bar, 24.0], [_l_hyper, 30.0],
 		["GrazeCap", 26.0], [_l_graze, 38.0], [_l_bullets, 26.0],
 	], 320.0)
+
+	# Must come after the stack above: that is what gives _hyper_bar its
+	# position. Computing it earlier aimed every spark at the panel's corner.
+	_sparks.target = _right.position + _hyper_bar.position \
+		+ Vector2(_hyper_bar.size.x * 0.5, 12.0)
 
 
 ## Positions a vertical stack of children, each entry [node_or_name, height].
@@ -570,7 +572,11 @@ class FieldOverlay:
 	func _draw() -> void:
 		var f := PixelFont.get_font()
 		if alert > 0.01:
-			_vignette()
+			_vignette(Color(1.0, 0.15, 0.25), alert, 2.6 + 4.5 * alert)
+		elif hyper:
+			# Softer and slower than the boss alert, so the two never read as
+			# the same warning.
+			_vignette(Color(1.0, 0.35, 0.95), 0.55, 5.0)
 		if flash > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, minf(flash, 0.75)))
 		if is_instance_valid(boss) and not boss.dying:
@@ -584,18 +590,18 @@ class FieldOverlay:
 		if message != "":
 			_draw_message(f)
 
-	## Red bloom creeping in from the playfield edges, breathing faster as the
-	## boss weakens. Bands rather than a shader so it costs nothing.
-	func _vignette() -> void:
-		var throb: float = 0.5 + 0.5 * sin(_t * (2.6 + 4.5 * alert))
-		var peak: float = alert * (0.30 + 0.70 * throb)
+	## Colour bloom creeping in from the playfield edges. Bands rather than a
+	## shader so it costs nothing. Used for both the boss alert and hyper.
+	func _vignette(col_base: Color, strength: float, rate: float) -> void:
+		var throb: float = 0.5 + 0.5 * sin(_t * rate)
+		var peak: float = strength * (0.30 + 0.70 * throb)
 		var bands := 9
-		var depth := 70.0 + 40.0 * alert
+		var depth := 70.0 + 40.0 * strength
 		for i in bands:
 			var t := float(i) / float(bands - 1)
 			var a: float = peak * 0.16 * (1.0 - t)
 			var w := depth * (1.0 - t) / float(bands) + 3.0
-			var col := Color(1.0, 0.15, 0.25, a)
+			var col := Color(col_base.r, col_base.g, col_base.b, a)
 			var off := depth * t / float(bands) * bands / 3.0
 			draw_rect(Rect2(Vector2(off, 0), Vector2(w, size.y)), col)
 			draw_rect(Rect2(Vector2(size.x - off - w, 0), Vector2(w, size.y)), col)
