@@ -101,6 +101,23 @@ func run(d: Director) -> void:
 	await d.wait_until_under(2, 24.0)
 	await d.wait(1.6)
 
+	# 6b. Prism choir over a nova pair - colour everywhere, then two blooms.
+	for i in 3:
+		d.one("PRISM", Vector2(W * (0.26 + 0.24 * i), Cfg.SPAWN_Y), {
+			"hp": 130,
+			"move": {"type": "enter_hold_exit", "enter": 1.2, "hold": 8.0,
+				"hold_at": Vector2(W * (0.26 + 0.24 * i), 195.0 + 40.0 * (i % 2)),
+				"exit_dir": 90.0, "exit_speed": 290.0},
+		})
+		await d.wait(0.5)
+	await d.wait(2.2)
+	d.one("NOVA", Vector2(W * 0.34, Cfg.SPAWN_Y), {"hp": 180})
+	d.one("NOVA", Vector2(W * 0.66, Cfg.SPAWN_Y), {"hp": 180})
+	await d.wait(1.6)
+	await d.row("LASHER", 4, 0.4, 150.0, W - 150.0, {"hp": 110})
+	await d.wait_until_under(2, 22.0)
+	await d.wait(1.4)
+
 	# 7. Triple carousel with the centre ring reversed.
 	d.carousel("SCOUT", 9, 280.0, 1.3, {"hp": 40})
 	await d.wait(0.7)

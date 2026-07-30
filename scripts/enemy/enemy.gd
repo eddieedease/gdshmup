@@ -31,6 +31,10 @@ const FLASH_GAIN := 2.4
 ## permanently refreshed and the target would sit solid white. Re-arming only
 ## once the flash has mostly decayed turns sustained fire into a hot strobe.
 const FLASH_REARM := 0.45
+## Hulls recoil a few pixels away from each hit, which makes shooting feel like
+## it connects with something rather than draining an invisible number.
+const FLINCH_DIST := 7.0
+const FLINCH_DECAY := 14.0
 
 var spec: Dictionary = {}
 var alive := true
@@ -61,6 +65,7 @@ var _fire_scale := 1.0   ## Stage-driven difficulty multiplier on fire rate.
 var _spd_scale := 1.0
 var _reveal := 0.0       ## Counts down once the hull clears the top edge.
 var _revealed := false
+var _flinch := Vector2.ZERO
 
 
 func setup(s: Dictionary, at: Vector2, difficulty: Dictionary = {}) -> void:
@@ -341,6 +346,12 @@ func _step_visual(dt: float) -> void:
 	_bank = Art.bank_row(-signf(vel.x) if absf(vel.x) > 40.0 else 0.0)
 	_sprite.frame = _bank * 2 + (int(age * 12.0) % 2)
 
+	if _flinch.length_squared() > 0.01:
+		_flinch = _flinch.lerp(Vector2.ZERO, clampf(dt * FLINCH_DECAY, 0.0, 1.0))
+		_sprite.position = _flinch
+	elif _sprite.position != Vector2.ZERO:
+		_sprite.position = Vector2.ZERO
+
 	if _flash > 0.0:
 		_flash -= dt
 		# Additive, not a lerp toward white: most enemies are already tinted
@@ -362,6 +373,8 @@ func take_damage(amount: float, at: Vector2 = Vector2.ZERO) -> void:
 	hp -= amount
 	if _flash <= FLASH_TIME * FLASH_REARM:
 		_flash = FLASH_TIME
+		if at != Vector2.ZERO:
+			_flinch = (position - at).normalized() * FLINCH_DIST
 	damaged.emit(self, amount)
 	if hp <= 0.0:
 		_die(at)
@@ -369,6 +382,13 @@ func take_damage(amount: float, at: Vector2 = Vector2.ZERO) -> void:
 
 func _die(at: Vector2) -> void:
 	alive = false
+	# A parting volley, so killing something is not always pure relief.
+	var burst: Variant = spec.get("death_burst", null)
+	if burst is Dictionary and bullets != null:
+		var target := position + Vector2(0, 200.0)
+		if is_instance_valid(player):
+			target = player.position
+		Patterns.emit(bullets, burst, position, 0, target)
 	var s := float(spec.get("scale", 0.24)) / 0.24
 	fx.explode(position, clampf(s, 0.7, 3.0), Color(1, 0.72, 0.35))
 	# Small fry pop, heavies boom.

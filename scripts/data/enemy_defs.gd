@@ -139,7 +139,7 @@ const TYPES := {
 			"exit_dir": 90.0, "exit_speed": 330.0, "bob": 8.0,
 		},
 		"attacks": [{
-			"pattern": "sniper", "speed": 620.0, "delay": 0.85,
+			"pattern": "sniper", "speed": 620.0, "delay": 0.85, "trail": 60.0,
 			"style": "needle", "color": "white", "start": 1.2, "interval": 1.6,
 		}],
 		"drop": "star",
@@ -206,6 +206,52 @@ const TYPES := {
 			"arm_gap": 26.0, "rot": 17.0, "style": "shard", "color": "cyan",
 			"aim": false, "start": 1.4, "interval": 0.5,
 		}],
+		"drop": "power",
+	},
+	"PRISM": {
+		# Hue-cycling rings: the flashiest thing in the game, and readable
+		# because the shape is a plain slow ring.
+		"tex": 2, "hp": 95, "scale": 0.27, "radius": 25, "score": 700,
+		"move": {
+			"type": "enter_hold_exit", "enter": 1.2, "hold": 7.0,
+			"exit_dir": 90.0, "exit_speed": 290.0,
+		},
+		"attacks": [{
+			"pattern": "ring", "n": 13, "speed": 195.0, "rot": 14.0,
+			"style": "star", "color": "cyan", "hue_cycle": 220.0,
+			"spin": 220.0, "aim": false, "start": 1.3, "interval": 1.3,
+		}],
+		"drop": "power",
+	},
+	"LASHER": {
+		# Streaking comets on a sweeping fan. The trails make the sweep legible
+		# a beat before it reaches you.
+		"tex": 6, "hp": 85, "scale": 0.25, "radius": 22, "score": 620,
+		"face": "vel",
+		"move": {"type": "sine", "dir": 90.0, "speed": 130.0, "amp": 110.0,
+			"freq": 1.5},
+		"attacks": [{
+			"pattern": "fan", "n": 3, "spread": 24.0, "swing": 70.0,
+			"swing_rate": 0.5, "speed": 300.0, "style": "comet",
+			"color": "ember", "trail": 46.0, "flash": false,
+			"start": 1.0, "interval": 0.3,
+		}],
+		"drop": "star",
+	},
+	"NOVA": {
+		# Detonates into a bloom when killed: the reward for popping it early
+		# is not having to thread the burst up close.
+		"tex": 4, "hp": 140, "scale": 0.30, "radius": 28, "score": 950,
+		"move": {"type": "drift", "speed": 105.0, "track": 55.0},
+		"attacks": [{
+			"pattern": "aimed", "n": 3, "spread": 26.0, "speed": 250.0,
+			"style": "orb", "color": "violet", "start": 1.2, "interval": 1.8,
+		}],
+		"death_burst": {
+			"pattern": "bloom", "n": 14, "speed": 380.0, "accel": -470.0,
+			"speed_min": -150.0, "style": "orb", "color": "violet",
+			"aim": false,
+		},
 		"drop": "power",
 	},
 	"WARDEN": {

@@ -15,6 +15,9 @@ const STAR_DROP_CHANCE := 0.06
 ## Hyper absorb feedback.
 const ABSORB_COL := Color(1.0, 0.55, 0.95)
 const ABSORB_POPUP_EVERY := 6
+## Every N chained kills gets a callout, so the combo system is visible in the
+## field rather than only as a sidebar number.
+const CHAIN_MILESTONE := 25
 
 var enemies: Array = []
 var items: Array[Item] = []
@@ -45,6 +48,8 @@ var _field_base := Vector2.ZERO
 var _paused := false
 var _shutting_down := false
 var _absorbed := 0
+## Guards overlapping dilations: only the most recent one restores the clock.
+var _dilate_token := 0
 var _pause_menu: PauseMenu
 var _boss: Boss = null
 
@@ -150,6 +155,17 @@ func _build() -> void:
 	_next_extend = 0
 
 
+## Briefly slows the whole simulation. The restore timer ignores time_scale, so
+## a heavy slowdown cannot stretch its own recovery.
+func time_dilate(scale: float, duration: float) -> void:
+	_dilate_token += 1
+	var token := _dilate_token
+	Engine.time_scale = scale
+	await get_tree().create_timer(duration, false, false, true).timeout
+	if token == _dilate_token:
+		Engine.time_scale = 1.0
+
+
 # --- Boss presentation -------------------------------------------------------
 
 func _on_boss_spawned(b: Boss) -> void:
@@ -158,6 +174,11 @@ func _on_boss_spawned(b: Boss) -> void:
 	b.phase_changed.connect(func(_i):
 		_hud.flash(0.45)
 		_shake = maxf(_shake, 12.0))
+	# The kill is the moment of the stage; let it land.
+	b.death_started.connect(func():
+		time_dilate(0.32, 1.2)
+		_hud.flash(0.6)
+		_shake = maxf(_shake, 16.0))
 
 
 func _on_boss_cleared() -> void:
@@ -199,6 +220,8 @@ func _start_run() -> void:
 ## Called by Main when this run is being replaced. The scene stops and hides
 ## immediately but frees itself once _start_run() finishes unwinding.
 func shutdown() -> void:
+	_dilate_token += 1
+	Engine.time_scale = 1.0
 	_shutting_down = true
 	over = true
 	_director.stop()
@@ -245,7 +268,25 @@ func _stage_clear() -> void:
 	_add_score(bonus)
 	_hud.banner("STAGE CLEAR", "BONUS  %s" % Cfg.fmt_score(bonus), 3.4)
 	AU.play("stage_clear")
+	_warp(4.0)
 	await get_tree().create_timer(4.0, false).timeout
+
+
+## Stretches the starfield into long streaks and decays it back, so the gap
+## between stages reads as travelling rather than waiting.
+func _warp(duration: float) -> void:
+	var t := 0.0
+	while t < duration:
+		var k: float = 1.0 - (t / duration)
+		var boost := 1.0 + 6.0 * k * k
+		_dust.warp = boost
+		_dust_near.warp = boost
+		_terrain.warp = 1.0 + 2.2 * k * k
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	_dust.warp = 1.0
+	_dust_near.warp = 1.0
+	_terrain.warp = 1.0
 
 
 func _all_clear() -> void:
@@ -273,6 +314,8 @@ func _game_over() -> void:
 
 
 func _finish() -> void:
+	_dilate_token += 1
+	Engine.time_scale = 1.0
 	# Wait for a fresh press so the death input does not skip the screen.
 	while not Input.is_action_just_pressed("p_start") \
 			and not Input.is_action_just_pressed("p_back"):
@@ -324,6 +367,8 @@ func _on_enemy_died(e: Enemy) -> void:
 	chain += 1
 	chain_time = Cfg.CHAIN_TIMEOUT
 	_player.add_charge(Cfg.HYPER_CHARGE_KILL)
+	if chain > 0 and chain % CHAIN_MILESTONE == 0:
+		_chain_milestone(e.position)
 	var gained := int(round(e.score * _chain_multiplier()))
 	_add_score(gained)
 	if e.score >= 500:
@@ -353,6 +398,17 @@ func _spawn_on_death(e: Enemy) -> void:
 		var child_enemy := Enemy.new()
 		child_enemy.setup(child, e.position, _director.difficulty)
 		add_enemy(child_enemy)
+
+
+## Celebrates a chain crossing a multiple of CHAIN_MILESTONE.
+func _chain_milestone(at: Vector2) -> void:
+	var tier: float = clampf(float(chain) / 150.0, 0.0, 1.0)
+	var col := Cfg.UI_ACCENT.lerp(Cfg.UI_GOLD, tier)
+	_fx.shockwave(at, 150.0 + 120.0 * tier, col, 0.6, 7.0)
+	_fx.popup(at + Vector2(0, -46), "%d CHAIN" % chain, col, 30)
+	_hud.flash(0.10 + 0.12 * tier)
+	_shake = maxf(_shake, 5.0 + 5.0 * tier)
+	AU.play("chain", 0.05)
 
 
 func _drop_for(e: Enemy) -> void:
@@ -425,6 +481,8 @@ func _on_bomb() -> void:
 
 
 func _on_life_lost() -> void:
+	# A short hitch so you can actually see what killed you.
+	time_dilate(0.42, 0.45)
 	chain = 0
 	chain_time = 0.0
 	_shake = 18.0

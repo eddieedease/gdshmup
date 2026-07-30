@@ -24,10 +24,49 @@ var _free: Array[Bullet] = []
 var _live: Array[Bullet] = []
 
 var _target := Vector2(Cfg.FIELD_W * 0.5, Cfg.FIELD_H * 0.8)
+var _trails: TrailLayer
+
+
+## Draws the streaks for every live bullet that asked for one. A single pass
+## here is far cheaper than giving each bullet its own trail node.
+class TrailLayer:
+	extends Node2D
+	var owner_mgr: BulletManager
+
+	func _process(_dt: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var pts := PackedVector2Array()
+		pts.resize(4)
+		var cols := PackedColorArray()
+		cols.resize(4)
+		for b in owner_mgr.live_bullets():
+			if b.trail_len <= 0.0 or b.delay > 0.0:
+				continue
+			var back := -Vector2.from_angle(b.dir) * b.trail_len
+			var side := Vector2.from_angle(b.dir + PI * 0.5) * (b.radius * 0.55)
+			var head: Color = b.modulate
+			head.a = 0.5
+			var tail := Color(head.r, head.g, head.b, 0.0)
+			pts[0] = b.position + side
+			pts[1] = b.position - side
+			pts[2] = b.position + back - side * 0.25
+			pts[3] = b.position + back + side * 0.25
+			cols[0] = head
+			cols[1] = head
+			cols[2] = tail
+			cols[3] = tail
+			draw_polygon(pts, cols)
 
 
 func setup(which: int, capacity: int) -> void:
 	team = which
+	# Drawn under the bullets so a streak never hides its own head.
+	_trails = TrailLayer.new()
+	_trails.owner_mgr = self
+	_trails.z_index = -1
+	add_child(_trails)
 	_pool.resize(0)
 	for i in capacity:
 		var b := Bullet.new()
@@ -41,6 +80,11 @@ func setup(which: int, capacity: int) -> void:
 
 func live_count() -> int:
 	return _live.size()
+
+
+## Live bullets, for the trail layer. Read-only by convention.
+func live_bullets() -> Array[Bullet]:
+	return _live
 
 
 ## Grabs a bullet from the pool and points it along `heading`.
@@ -107,6 +151,16 @@ func _style(b: Bullet, style: String, mul: float) -> void:
 			b.frames = Art.apply_sheet(b, "bolt", true)
 			b.scale = Vector2(0.13, 0.24) * mul
 			b.radius = 9.0 * mul
+		"comet":
+			# Big soft head; pair with a `trail` for a proper streaking comet.
+			b.frames = Art.apply_sheet(b, "plasma", true)
+			b.scale = Vector2.ONE * 0.24 * mul
+			b.radius = 14.0 * mul
+		"star":
+			# Non-directional and spinning: reads as ornament, not a dart.
+			b.frames = Art.apply_sheet(b, "spread", true)
+			b.scale = Vector2.ONE * 0.24 * mul
+			b.radius = 14.0 * mul
 		"seed":
 			# Carrier for scatter patterns: fat and slow so the split reads.
 			b.frames = Art.apply_sheet(b, "plasma", true)

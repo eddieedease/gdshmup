@@ -75,6 +75,13 @@ func run(d: Director) -> void:
 	await d.wait_until_under(2, 20.0)
 	await d.wait(1.6)
 
+	# 6b. Lashers whipping comet fans across the lane.
+	await d.row("LASHER", 3, 0.5, 180.0, W - 180.0)
+	await d.wait(3.0)
+	d.one("NOVA", Vector2(W * 0.5, Cfg.SPAWN_Y))
+	await d.wait_until_under(2, 18.0)
+	await d.wait(1.4)
+
 	# 7. Blade fans sweeping the arena.
 	for i in 2:
 		d.one("BLADE", Vector2(W * (0.32 + 0.36 * i), Cfg.SPAWN_Y), {

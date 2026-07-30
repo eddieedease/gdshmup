@@ -25,6 +25,9 @@ const COUNT := 110
 var speed := 120.0
 var tint := Color(0.85, 0.93, 1.0)
 var foreground := false
+## Multiplier applied to both travel speed and streak length; ramped during
+## stage transitions to stretch the field into a warp.
+var warp := 1.0
 
 var _x: PackedFloat32Array = PackedFloat32Array()
 var _y: PackedFloat32Array = PackedFloat32Array()
@@ -55,7 +58,7 @@ func _spawn_x() -> float:
 func _process(dt: float) -> void:
 	for i in COUNT:
 		var band: Array = BANDS[_band[i]]
-		_y[i] += speed * float(band[0]) * dt
+		_y[i] += speed * float(band[0]) * warp * dt
 		if _y[i] > Cfg.FIELD_H + 40.0:
 			_y[i] = randf_range(-140.0, -20.0)
 			_x[i] = randf_range(0.0, Cfg.FIELD_W)
@@ -65,7 +68,7 @@ func _process(dt: float) -> void:
 
 func _draw() -> void:
 	# Faster travel stretches every streak, so acceleration is visible.
-	var stretch: float = clampf(speed / 110.0, 0.6, 2.4)
+	var stretch: float = clampf(speed / 110.0, 0.6, 2.4) * warp
 	var pts := PackedVector2Array()
 	pts.resize(4)
 	var cols := PackedColorArray()

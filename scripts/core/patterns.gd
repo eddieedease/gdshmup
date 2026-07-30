@@ -26,6 +26,8 @@ extends RefCounted
 ##   homing_time how long homing lasts
 ##   scale       art scale multiplier
 ##   life        seconds before self-destruct
+##   trail       length of the fading streak drawn behind the bullet
+##   hue_cycle   degrees/s of hue rotation, for shifting "prism" bullets
 ##   payload     for "scatter": the volley a carrier leaves when it bursts
 ##
 ## Reserved by the Enemy attack scheduler, not by patterns: `start`, `interval`,
@@ -119,6 +121,8 @@ static func _mk(bm: BulletManager, s: Dictionary, origin: Vector2, ang: float,
 	if hom > 0.0:
 		b.homing = hom * DEG
 		b.homing_time = float(s.get("homing_time", 1.2))
+	b.trail_len = float(s.get("trail", 0.0))
+	b.hue_cycle = float(s.get("hue_cycle", 0.0))
 	if s.has("spin"):
 		b.face_dir = false
 		b.spin = float(s.spin) * DEG

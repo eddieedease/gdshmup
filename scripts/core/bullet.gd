@@ -74,6 +74,11 @@ var base_scale := Vector2.ONE
 var base_color := Color.WHITE
 var pulse_phase := 0.0
 
+## Fading streak drawn behind fast bullets. 0 disables it.
+var trail_len := 0.0
+## Degrees of hue rotation per second. Non-zero gives a shifting "prism" bullet.
+var hue_cycle := 0.0
+
 
 func reset() -> void:
 	alive = true
@@ -97,6 +102,8 @@ func reset() -> void:
 	grazed = false
 	scored = false
 	split_after = 0.0
+	trail_len = 0.0
+	hue_cycle = 0.0
 	if not split_spec.is_empty():
 		split_spec = {}
 	modulate = Color.WHITE
@@ -123,8 +130,11 @@ func _apply_pulse(alpha: float) -> void:
 	# clip toward white on the brightest pixels, which is exactly the hot-core
 	# look a bullet wants.
 	var b := (1.0 + PULSE_BRIGHT * k) * Cfg.BULLET_GAIN
-	modulate = Color(base_color.r * b, base_color.g * b, base_color.b * b,
-		base_color.a * alpha)
+	var c := base_color
+	if hue_cycle != 0.0:
+		c = Color.from_hsv(fmod(c.h + age * hue_cycle / 360.0, 1.0),
+			maxf(c.s, 0.75), c.v, c.a)
+	modulate = Color(c.r * b, c.g * b, c.b * b, c.a * alpha)
 
 
 ## Integrates one frame. Returns false when the bullet should be recycled.

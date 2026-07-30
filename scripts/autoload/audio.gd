@@ -104,6 +104,12 @@ const BANK := {
 		{"f0": 1170.0, "f1": 1170.0, "dur": 0.16, "wave": Wave.SQUARE,
 			"vol": 0.32, "decay": 2.0},
 	],
+	"chain": [
+		{"f0": 880.0, "f1": 880.0, "dur": 0.05, "wave": Wave.SQUARE,
+			"vol": 0.28, "decay": 0.8},
+		{"f0": 1320.0, "f1": 1760.0, "dur": 0.16, "wave": Wave.SQUARE,
+			"vol": 0.32, "decay": 2.0},
+	],
 	"boss_phase": [{
 		"f0": 140.0, "f1": 320.0, "dur": 0.5, "wave": Wave.SAW,
 		"noise": 0.3, "vol": 0.55, "decay": 1.4, "sweep": 1.6,

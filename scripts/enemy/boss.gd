@@ -8,6 +8,7 @@ extends Enemy
 ## the pattern machinery is reused unchanged.
 
 signal phase_changed(index: int)
+signal death_started
 signal defeated(boss: Boss)
 
 const INTRO_TIME := 2.4
@@ -131,6 +132,9 @@ func take_damage(amount: float, at: Vector2 = Vector2.ZERO) -> void:
 	hp -= amount
 	if _flash <= FLASH_TIME * FLASH_REARM:
 		_flash = FLASH_TIME
+		if at != Vector2.ZERO:
+			# Half throw: a hull this size should barely budge.
+			_flinch = (position - at).normalized() * FLINCH_DIST * 0.5
 	# A hull this big needs impact sparks, not just a tint change.
 	if _spark_cd <= 0.0:
 		_spark_cd = 0.05
@@ -158,6 +162,7 @@ func _advance_phase() -> void:
 
 
 func _begin_death() -> void:
+	death_started.emit()
 	dying = true
 	alive = false
 	hittable = false

@@ -77,6 +77,8 @@ const STAR_LAYERS := [
 ]
 
 var speed := 132.0
+## Transient scroll multiplier used by the stage-transition warp.
+var warp := 1.0
 
 var _tiles: Array[Sprite2D] = []
 var _row_id: PackedInt32Array = PackedInt32Array()
@@ -165,12 +167,12 @@ func _seed_stars() -> void:
 
 
 func _process(dt: float) -> void:
-	_scroll += speed * dt
+	_scroll += speed * warp * dt
 	if _space:
 		_step_stars(dt)
 	else:
 		_refresh()
-	var dspeed := speed * 1.65
+	var dspeed := speed * 1.65 * warp
 	for i in _decor.size():
 		_decor_y[i] += dspeed * dt
 		if _decor_y[i] > Cfg.FIELD_H + 200.0:
@@ -184,7 +186,7 @@ func _process(dt: float) -> void:
 func _step_stars(dt: float) -> void:
 	for i in _stars.size():
 		var st := _stars[i]
-		st.y += speed * float(STAR_LAYERS[int(st.z)][1]) * dt
+		st.y += speed * float(STAR_LAYERS[int(st.z)][1]) * warp * dt
 		if st.y > Cfg.FIELD_H + 8.0:
 			st.y = randf_range(-40.0, -4.0)
 			st.x = randf_range(0.0, Cfg.FIELD_W)

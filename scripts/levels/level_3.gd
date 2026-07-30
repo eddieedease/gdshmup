@@ -71,6 +71,19 @@ func run(d: Director) -> void:
 	await d.wait_until_under(2, 14.0)
 	await d.wait(1.2)
 
+	# 4c. First prisms, as a spectacle before the pace picks up.
+	for i in 2:
+		d.one("PRISM", Vector2(W * (0.34 + 0.32 * i), Cfg.SPAWN_Y), {
+			"move": {"type": "enter_hold_exit", "enter": 1.2, "hold": 6.5,
+				"hold_at": Vector2(W * (0.34 + 0.32 * i), 210.0),
+				"exit_dir": 90.0, "exit_speed": 290.0},
+		})
+		await d.wait(0.6)
+	await d.wait(2.6)
+	await d.row("POPCORN", 6, 0.16, 140.0, W - 140.0)
+	await d.wait_until_under(2, 14.0)
+	await d.wait(1.2)
+
 	# 5. Triple carousel.
 	d.carousel("SCOUT", 8, 270.0, 1.25, {"hp": 30})
 	await d.wait(0.8)
