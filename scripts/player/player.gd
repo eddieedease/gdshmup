@@ -76,6 +76,7 @@ var _options: Array[OptionBit] = []
 var _shot_cd := 0.0
 var _opt_cd := 0.0
 var _beam_spark_cd := 0.0
+var _beam_hyper := false
 var _t := 0.0
 var _dead_timer := 0.0
 var _bank := 1
@@ -309,12 +310,14 @@ func _fire_shot(dt: float) -> void:
 		var dmg: int = ShipDefs.at_power(ship, "shot_damage", power)
 		var pierce: int = ShipDefs.at_power(ship, "shot_pierce", power)
 		var spread: float = float(ship.shot_spread) * PI / 180.0
-		var spd: float = ship.shot_speed
+		var spd: float = ship.shot_speed * _shot_speed_mul()
+		var mul := _shot_scale_mul()
+		var col := _shot_colour()
 		var nose := position + Vector2(0, -30)
 		for i in n:
 			var t := 0.0 if n == 1 else float(i) / float(n - 1) - 0.5
 			var a := -PI * 0.5 + t * spread
-			var b := bullets.spawn(nose, a, spd, "pshot", colour)
+			var b := bullets.spawn(nose, a, spd, "pshot", col, mul)
 			if b:
 				b.damage = dmg
 				b.pierce = pierce
@@ -329,7 +332,7 @@ func _fire_shot(dt: float) -> void:
 		if is_hyper():
 			_extra_pair(nose, 0.16, spd * 1.1, dmg, pierce + 1, "pshot")
 
-		fx.muzzle(nose, -PI * 0.5, colour, 0.14)
+		fx.muzzle(nose, -PI * 0.5, col, 0.14 * mul)
 		AU.play("shot", 0.07)
 
 	_opt_cd -= dt
@@ -340,8 +343,9 @@ func _fire_shot(dt: float) -> void:
 		for i in mini(count, _options.size()):
 			var o := _options[i]
 			if String(ship.opt_mode) == "missile":
-				var m := bullets.spawn(o.position, -PI * 0.5 + o.side * 0.5, 420.0,
-					"pmissile", colour.lightened(0.25))
+				var m := bullets.spawn(o.position, -PI * 0.5 + o.side * 0.5,
+					420.0 * _shot_speed_mul(), "pmissile",
+					_shot_colour().lightened(0.25), _shot_scale_mul())
 				if m:
 					m.damage = odmg
 					m.homing = 300.0 * PI / 180.0
@@ -350,11 +354,25 @@ func _fire_shot(dt: float) -> void:
 					m.speed_max = 1150.0
 					m.life = 2.6
 			else:
-				var b := bullets.spawn(o.position, -PI * 0.5, float(ship.shot_speed) * 0.9,
-					"pspread", colour.lightened(0.2))
+				var b := bullets.spawn(o.position, -PI * 0.5,
+					float(ship.shot_speed) * 0.9 * _shot_speed_mul(),
+					"pspread", _shot_colour().lightened(0.2), _shot_scale_mul())
 				if b:
 					b.damage = odmg
 					b.life = 2.5
+
+
+## Hyper fattens, accelerates and tints your fire.
+func _shot_scale_mul() -> float:
+	return Cfg.HYPER_BULLET_SCALE if is_hyper() else 1.0
+
+
+func _shot_speed_mul() -> float:
+	return Cfg.HYPER_BULLET_SPEED if is_hyper() else 1.0
+
+
+func _shot_colour() -> Color:
+	return colour.lerp(Cfg.HYPER_TINT, 0.4) if is_hyper() else colour
 
 
 ## Two mirrored shots at +/- `half_spread` from straight up.
@@ -362,7 +380,7 @@ func _extra_pair(from: Vector2, half_spread: float, spd: float, dmg: int,
 		pierce: int, style: String) -> void:
 	for sign_ in [-1.0, 1.0]:
 		var b := bullets.spawn(from, -PI * 0.5 + sign_ * half_spread, spd,
-			style, colour.lightened(0.15))
+			style, _shot_colour().lightened(0.15), _shot_scale_mul())
 		if b:
 			b.damage = dmg
 			b.pierce = pierce
@@ -374,6 +392,14 @@ func _extra_pair(from: Vector2, half_spread: float, spd: float, dmg: int,
 func _fire_laser(dt: float) -> void:
 	var dps: float = ShipDefs.at_power(ship, "laser_dps", power)
 	var width: float = ShipDefs.at_power(ship, "laser_width", power)
+	if is_hyper():
+		# Laser players would otherwise get no visible hyper payoff.
+		width *= Cfg.HYPER_BULLET_SCALE
+		_beam.configure(width, Color(Cfg.HYPER_TINT.r, Cfg.HYPER_TINT.g,
+			Cfg.HYPER_TINT.b, 0.92))
+	elif _beam_hyper:
+		_refresh_beams()
+	_beam_hyper = is_hyper()
 
 	_beam.visible = true
 	_beam.set_length(position.y + 80.0)

@@ -375,9 +375,12 @@ func _on_enemy_died(e: Enemy) -> void:
 		_fx.popup(e.position, Cfg.fmt_score(gained), Cfg.UI_GOLD, 24)
 	_shake = maxf(_shake, clampf(e.score / 3000.0, 0.6, 9.0))
 	_spawn_on_death(e)
-	# Visualise the charge this kill fed into the meter.
+	# Visualise the charge this kill fed into the meter. Bigger targets send a
+	# small burst, so the payout scales with what you killed.
 	if not _player.is_hyper():
-		_hud.charge_spark(e.position + _field.position)
+		var motes: int = 1 if e.score < 500 else (2 if e.score < 2000 else 4)
+		for i in motes:
+			_hud.charge_spark(e.position + _field.position)
 	_drop_for(e)
 
 

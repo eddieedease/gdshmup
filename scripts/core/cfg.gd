@@ -50,6 +50,13 @@ const HYPER_CHARGE_ITEM := 0.003
 const HYPER_ABSORB_RADIUS := 190.0
 const HYPER_FIRE_BOOST := 0.62   ## Cooldown multiplier: lower is faster.
 const HYPER_ABSORB_SCORE := 400
+## While hyper is up your own fire grows and accelerates. The scale also grows
+## the bullet's hitbox, so hyper genuinely lands more hits rather than just
+## looking louder.
+const HYPER_BULLET_SCALE := 1.5
+const HYPER_BULLET_SPEED := 1.35
+## Shots blend toward this while hyper, so hyper fire is unmistakably yours.
+const HYPER_TINT := Color(1.0, 0.55, 0.95)
 
 ## First threshold is deliberately low enough to land around the stage 2 boss;
 ## the stage 2 and 4 bosses also drop a 1UP outright (BossDefs.drop_extend).

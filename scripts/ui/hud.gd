@@ -468,8 +468,10 @@ class IconRow:
 ## small - it is a hint about where charge comes from, not a fireworks display.
 class ChargeSparks:
 	extends Control
-	const POOL := 48
-	const LIFE := 0.55
+	const POOL := 64
+	const LIFE := 0.72
+	const HEAD_R := 7.0     ## Radius at launch; tapers to TAIL_R on arrival.
+	const TAIL_R := 2.2
 
 	var target := Vector2(1600, 600)
 
@@ -505,19 +507,34 @@ class ChargeSparks:
 		if busy:
 			queue_redraw()
 
+	## Position along the arc at normalised time `e`.
+	func _point(i: int, e: float) -> Vector2:
+		var p: Vector2 = _from[i].lerp(target, e)
+		# Perpendicular bow so a burst of motes fans out instead of overlapping.
+		return p + Vector2(0, -1).rotated(
+			(target - _from[i]).angle()) * _bow[i] * sin(e * PI)
+
 	func _draw() -> void:
 		for i in POOL:
 			var t: float = _age[i] / LIFE
 			if t >= 1.0:
 				continue
-			# Ease out, with a perpendicular bow that flattens on arrival.
 			var e: float = 1.0 - pow(1.0 - t, 2.2)
-			var p: Vector2 = _from[i].lerp(target, e)
-			p += Vector2(0, -1).rotated(
-				(target - _from[i]).angle()) * _bow[i] * sin(e * PI)
+			var p := _point(i, e)
 			var c: Color = _col[i]
-			c.a = (1.0 - t) * 0.7
-			draw_circle(p, lerpf(3.2, 1.2, t), c)
+			var fade: float = 1.0 - t * t
+
+			# Short streak behind the head, so the motion is legible rather
+			# than a dot that happens to be somewhere new each frame.
+			var back := _point(i, maxf(e - 0.12, 0.0))
+			draw_line(back, p, Color(c.r, c.g, c.b, fade * 0.45),
+				lerpf(HEAD_R, TAIL_R, t) * 0.8)
+			# Soft halo, then a hot core.
+			draw_circle(p, lerpf(HEAD_R, TAIL_R, t) * 1.8,
+				Color(c.r, c.g, c.b, fade * 0.22))
+			draw_circle(p, lerpf(HEAD_R, TAIL_R, t), Color(c.r, c.g, c.b, fade))
+			draw_circle(p, lerpf(HEAD_R, TAIL_R, t) * 0.45,
+				Color(1, 1, 1, fade * 0.9))
 
 
 ## Draws inside the playfield: boss health, stage banners, warnings, messages.
