@@ -17,6 +17,13 @@ const DEG := PI / 180.0
 ## this window keeps entries - and boss phase changes - continuous.
 const MOVE_BLEND := 0.55
 
+## At high power the player's fire reaches the top of the field, so enemies used
+## to be destroyed while still above the edge - you never saw what you killed.
+## They stay untouchable until they are properly on screen, plus a short grace
+## after that, and shimmer while protected so the state is legible.
+const REVEAL_Y := 36.0
+const REVEAL_GRACE := 0.45
+
 ## Hit flash: how long it lasts and how far toward white it pushes.
 const FLASH_TIME := 0.09
 const FLASH_GAIN := 2.4
@@ -52,6 +59,8 @@ var _start := Vector2.ZERO
 var _dive_dir := Vector2.DOWN
 var _fire_scale := 1.0   ## Stage-driven difficulty multiplier on fire rate.
 var _spd_scale := 1.0
+var _reveal := 0.0       ## Counts down once the hull clears the top edge.
+var _revealed := false
 
 
 func setup(s: Dictionary, at: Vector2, difficulty: Dictionary = {}) -> void:
@@ -70,6 +79,10 @@ func setup(s: Dictionary, at: Vector2, difficulty: Dictionary = {}) -> void:
 	score = int(s.get("score", 100))
 	_face = String(s.get("face", "down"))
 	_cull_grace = float(s.get("cull_grace", 1.2))
+	# Bosses and anything spawning already on screen skip the reveal.
+	_revealed = bool(s.get("no_reveal", false)) or at.y > REVEAL_Y
+	_reveal = 0.0 if _revealed else REVEAL_GRACE
+	hittable = _revealed
 
 	_sprite = Sprite2D.new()
 	_sprite.centered = true
@@ -106,12 +119,30 @@ func _process(dt: float) -> void:
 	if not alive:
 		return
 	age += dt
+	_step_reveal(dt)
 	_step_move(dt)
 	_step_attacks(dt)
 	_step_visual(dt)
 
 	if age > _cull_grace and not Cfg.in_field(position, Cfg.CULL_MARGIN):
 		_despawn()
+
+
+## Holds off damage until the hull is on screen and the grace has elapsed.
+func _step_reveal(dt: float) -> void:
+	if _revealed:
+		return
+	if position.y > REVEAL_Y:
+		_reveal -= dt
+		if _reveal <= 0.0:
+			_revealed = true
+			hittable = true
+			_sprite.modulate = _base_tint()
+			return
+	# Shimmer while protected so it never looks like a bug.
+	var k: float = 0.55 + 0.45 * absf(sin(age * 16.0))
+	var b := _base_tint()
+	_sprite.modulate = Color(b.r, b.g, b.b, b.a * k)
 
 
 # --- Movement ----------------------------------------------------------------

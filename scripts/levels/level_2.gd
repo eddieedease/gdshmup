@@ -20,7 +20,7 @@ func run(d: Director) -> void:
 	await d.row("SCOUT", 6, 0.18, 120.0, W - 120.0, {
 		"hp": 22,
 		"attacks": [{"pattern": "aimed", "n": 3, "spread": 24.0, "speed": 270.0,
-			"style": "small", "color": "amber", "start": 0.6, "interval": 1.2}],
+			"style": "small", "color": "ember", "start": 0.6, "interval": 1.2}],
 	})
 	await d.wait(2.6)
 
@@ -53,7 +53,7 @@ func run(d: Director) -> void:
 	# 5. Divers with a curtain underneath them.
 	d.one("BOMBER", Vector2(W * 0.35, Cfg.SPAWN_Y), {
 		"attacks": [{"pattern": "wall", "n": 16, "gap": 3, "speed": 215.0,
-			"style": "small", "color": "amber", "start": 1.0, "interval": 1.7}],
+			"style": "small", "color": "ember", "start": 1.0, "interval": 1.7}],
 	})
 	await d.wait(1.4)
 	await d.row("HUNTER", 4, 0.16, 140.0, W - 140.0)

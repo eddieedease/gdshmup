@@ -71,6 +71,22 @@ static func emit(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
 			_lockon(bm, s, origin, idx, target)
 		"vortex":
 			_vortex(bm, s, origin, idx, target)
+		"gatling":
+			_gatling(bm, s, origin, idx, target)
+		"helix":
+			_helix(bm, s, origin, idx, target)
+		"scatter":
+			_scatter(bm, s, origin, idx, target)
+		"unfurl":
+			_unfurl(bm, s, origin, idx, target)
+		"sniper":
+			_sniper(bm, s, origin, idx, target)
+		"minefield":
+			_minefield(bm, s, origin, idx, target)
+		"wave_wall":
+			_wave_wall(bm, s, origin, idx, target)
+		"pinwheel":
+			_pinwheel(bm, s, origin, idx, target)
 		_:
 			_aimed(bm, s, origin, idx, target)
 
@@ -366,6 +382,121 @@ static func _lockon(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
 		var b := _mk(bm, s, p, ang + PI, spd)
 		if b:
 			b.delay = float(s.get("delay", 0.6)) + 0.03 * i
+
+
+## A tight, fast machine-gun stream with just enough jitter to be unpredictable
+## without being unreadable. Cheap per volley, meant to be fired often.
+static func _gatling(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
+		target: Vector2) -> void:
+	var spd := float(s.get("speed", 380.0))
+	var jitter := float(s.get("spread", 6.0)) * DEG
+	var a := _base_angle(s, origin, idx, target)
+	_mk(bm, s, origin, a + randf_range(-0.5, 0.5) * jitter, spd)
+
+
+## Two sine-offset streams running in antiphase, weaving past each other.
+static func _helix(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
+		target: Vector2) -> void:
+	var spd := float(s.get("speed", 230.0))
+	var amp := float(s.get("wave", 34.0))
+	var freq := float(s.get("wave_freq", 7.0))
+	var a := _base_angle(s, origin, idx, target)
+	for i in 2:
+		var b := _mk(bm, s, origin, a, spd)
+		if b:
+			b.wave_amp = amp
+			b.wave_freq = freq
+			b.wave_phase = 0.0 if i == 0 else PI
+
+
+## Fat slow carriers that burst into a ring partway down the screen. The `burst`
+## sub-dictionary is the volley they leave behind.
+static func _scatter(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
+		target: Vector2) -> void:
+	var n := int(s.get("n", 3))
+	var spread := float(s.get("spread", 50.0)) * DEG
+	var spd := float(s.get("speed", 210.0))
+	var a := _base_angle(s, origin, idx, target)
+	var payload: Dictionary = s.get("burst", {
+		"pattern": "ring", "n": 8, "speed": 200.0, "style": "small",
+		"color": String(s.get("color", "pink")), "aim": false,
+	})
+	for i in n:
+		var t := 0.0 if n == 1 else float(i) / float(n - 1) - 0.5
+		var b := _mk(bm, s, origin, a + t * spread, spd)
+		if b:
+			b.split_after = float(s.get("fuse", 1.1))
+			b.split_spec = payload
+
+
+## A ring that appears one bullet at a time, unzipping around the circle before
+## the whole thing launches.
+static func _unfurl(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
+		target: Vector2) -> void:
+	var n := int(s.get("n", 18))
+	var spd := float(s.get("speed", 220.0))
+	var stagger := float(s.get("stagger", 0.035))
+	var a := _base_angle(s, origin, idx, target)
+	for i in n:
+		var b := _mk(bm, s, origin, a + TAU * float(i) / float(n), spd)
+		if b:
+			b.delay = float(s.get("delay", 0.25)) + stagger * i
+
+
+## One very fast shot with a long, obvious tell. Punishes standing still.
+static func _sniper(bm: BulletManager, s: Dictionary, origin: Vector2, idx: int,
+		target: Vector2) -> void:
+	var b := _mk(bm, s, origin, _base_angle(s, origin, idx, target),
+		float(s.get("speed", 620.0)))
+	if b:
+		b.delay = float(s.get("delay", 0.85))
+
+
+## Bullets parked around the field that sit, then converge. Turns the whole
+## playfield into a timed hazard rather than a stream to dodge.
+static func _minefield(bm: BulletManager, s: Dictionary, origin: Vector2,
+		idx: int, target: Vector2) -> void:
+	var n := int(s.get("n", 5))
+	var spd := float(s.get("speed", 260.0))
+	for i in n:
+		var p := Vector2(randf_range(60.0, Cfg.FIELD_W - 60.0),
+			randf_range(120.0, Cfg.FIELD_H * 0.62))
+		var b := _mk(bm, s, p, (target - p).angle(), spd)
+		if b:
+			b.delay = float(s.get("delay", 1.2)) + 0.08 * i
+
+
+## A curtain of sine-weaving bullets: the gaps move, so you cannot just pick a
+## column and sit in it.
+static func _wave_wall(bm: BulletManager, s: Dictionary, origin: Vector2,
+		idx: int, target: Vector2) -> void:
+	var n := int(s.get("n", 12))
+	var spd := float(s.get("speed", 200.0))
+	var a := float(s.get("base", 90.0)) * DEG
+	for i in n:
+		var x := Cfg.FIELD_W * (float(i) + 0.5) / float(n)
+		var b := _mk(bm, s, Vector2(x, origin.y), a, spd)
+		if b:
+			b.wave_amp = float(s.get("wave", 46.0))
+			b.wave_freq = float(s.get("wave_freq", 3.4))
+			b.wave_phase = float(i) * PI * 0.5
+
+
+## Straight arms that rotate as a rigid body, sweeping the field like blades.
+static func _pinwheel(bm: BulletManager, s: Dictionary, origin: Vector2,
+		idx: int, target: Vector2) -> void:
+	var arms := int(s.get("arms", 4))
+	var per := int(s.get("n", 5))
+	var spd := float(s.get("speed", 240.0))
+	var step := float(s.get("arm_gap", 26.0))
+	var a := _base_angle(s, origin, idx, target)
+	for i in arms:
+		var o := a + TAU * float(i) / float(arms)
+		for j in per:
+			# Later bullets start slower, so the arm stays a straight line.
+			var b := _mk(bm, s, origin, o, spd - step * j)
+			if b:
+				b.life = float(s.get("life", 7.0))
 
 
 ## Ring whose bullets spiral outward on a widening curve.

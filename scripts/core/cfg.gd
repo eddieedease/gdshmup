@@ -34,6 +34,10 @@ const POWER_PER_BAR := 4
 const POWER_BARS := 3
 const MAX_POWER := POWER_PER_BAR * POWER_BARS
 
+## Power items are chips, not whole levels: each bar costs more chips than the
+## last, so full power lands around stage three of five instead of stage one.
+const POWER_CHIP_COST := [2, 3, 4]
+
 const CHAIN_TIMEOUT := 1.35
 
 # --- Hyper ------------------------------------------------------------------
@@ -47,7 +51,7 @@ const HYPER_ABSORB_RADIUS := 190.0
 const HYPER_FIRE_BOOST := 0.62   ## Cooldown multiplier: lower is faster.
 const HYPER_ABSORB_SCORE := 400
 
-const EXTEND_SCORES := [2_000_000, 5_000_000, 10_000_000]
+const EXTEND_SCORES := [1_500_000, 4_000_000, 8_000_000, 14_000_000, 22_000_000]
 
 # --- Palette -----------------------------------------------------------------
 
@@ -60,16 +64,26 @@ const UI_ACCENT := Color(0.361, 0.878, 1.0)
 const UI_WARN := Color(1.0, 0.352, 0.451)
 const UI_GOLD := Color(1.0, 0.796, 0.278)
 
+## Enemy bullet palette. Deliberately free of yellow, gold and orange: those
+## are the pickup colours (see Item.COLORS), and a warm bullet in a crowded
+## field reads as "fly into me". Everything here is cool or magenta, well clear
+## of anything collectable.
 const BULLET_COLORS := {
 	"pink": Color(1.0, 0.42, 0.78),
 	"blue": Color(0.42, 0.72, 1.0),
 	"cyan": Color(0.40, 1.0, 0.95),
 	"green": Color(0.52, 1.0, 0.58),
-	"amber": Color(1.0, 0.78, 0.30),
 	"violet": Color(0.74, 0.52, 1.0),
-	"red": Color(1.0, 0.36, 0.32),
+	"red": Color(1.0, 0.34, 0.40),
+	"ember": Color(1.0, 0.30, 0.52),
+	"teal": Color(0.30, 0.90, 0.80),
+	"indigo": Color(0.55, 0.55, 1.0),
 	"white": Color(1.0, 1.0, 1.0),
 }
+
+## Bullets are drawn brighter than their nominal colour so they separate from
+## the terrain even in a dense curtain.
+const BULLET_GAIN := 1.22
 
 # --- Z ordering --------------------------------------------------------------
 
@@ -82,6 +96,20 @@ const Z_PLAYER := 16
 const Z_EBULLET := 24
 const Z_FX := 32
 const Z_OVERLAY := 48
+
+
+## Chips needed to climb out of `power` (1-based) into the next level.
+static func chip_cost(power: int) -> int:
+	var bar: int = clampi((power - 1) / POWER_PER_BAR, 0, POWER_CHIP_COST.size() - 1)
+	return POWER_CHIP_COST[bar]
+
+
+## Total chips required to go from power 1 to full, for reference/tuning.
+static func chips_to_max() -> int:
+	var total := 0
+	for lvl in range(1, MAX_POWER):
+		total += chip_cost(lvl)
+	return total
 
 
 static func color_of(name: String) -> Color:

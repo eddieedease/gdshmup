@@ -69,43 +69,56 @@ func _style(b: Bullet, style: String, mul: float) -> void:
 	match style:
 		"tiny":
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
-			b.scale = Vector2.ONE * 0.108 * mul
-			b.radius = 6.8 * mul
+			b.scale = Vector2.ONE * 0.13 * mul
+			b.radius = 7.4 * mul
 		"small":
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
-			b.scale = Vector2.ONE * 0.158 * mul
-			b.radius = 9.6 * mul
+			b.scale = Vector2.ONE * 0.19 * mul
+			b.radius = 10.4 * mul
 		"orb":
 			b.frames = Art.apply_sheet(b, "plasma", true)
-			b.scale = Vector2.ONE * 0.215 * mul
-			b.radius = 13.4 * mul
+			b.scale = Vector2.ONE * 0.255 * mul
+			b.radius = 14.4 * mul
 		"bigorb":
 			b.frames = Art.apply_sheet(b, "plasma", true)
 			b.scale = Vector2.ONE * 0.30 * mul
 			b.radius = 21.0 * mul
 		"needle":
 			b.frames = Art.apply_sheet(b, "laser", true)
-			b.scale = Vector2(0.115, 0.26) * mul
-			b.radius = 7.9 * mul
+			b.scale = Vector2(0.145, 0.31) * mul
+			b.radius = 8.5 * mul
 		"wave":
 			b.frames = Art.apply_sheet(b, "wavebeam", true)
-			b.scale = Vector2.ONE * 0.2 * mul
-			b.radius = 11.2 * mul
+			b.scale = Vector2.ONE * 0.235 * mul
+			b.radius = 12.0 * mul
 		"missile":
 			b.frames = Art.apply_sheet(b, "missile", true)
-			b.scale = Vector2.ONE * 0.21 * mul
-			b.radius = 11.2 * mul
+			b.scale = Vector2.ONE * 0.25 * mul
+			b.radius = 12.0 * mul
 		"bolt":
 			b.frames = Art.apply_sheet(b, "bolt", true)
-			b.scale = Vector2.ONE * 0.2 * mul
-			b.radius = 10.1 * mul
+			b.scale = Vector2.ONE * 0.235 * mul
+			b.radius = 10.9 * mul
+		"spread":
+			b.frames = Art.apply_sheet(b, "spread", true)
+			b.scale = Vector2.ONE * 0.20 * mul
+			b.radius = 13.0 * mul
+		"shard":
+			b.frames = Art.apply_sheet(b, "bolt", true)
+			b.scale = Vector2(0.13, 0.24) * mul
+			b.radius = 9.0 * mul
+		"seed":
+			# Carrier for scatter patterns: fat and slow so the split reads.
+			b.frames = Art.apply_sheet(b, "plasma", true)
+			b.scale = Vector2.ONE * 0.30 * mul
+			b.radius = 15.0 * mul
 		"pshot":
 			b.frames = Art.apply_sheet(b, "bolt", true)
 			b.scale = Vector2(0.19, 0.28) * mul
 			b.radius = 14.0 * mul
 		"pspread":
 			b.frames = Art.apply_sheet(b, "spread", true)
-			b.scale = Vector2.ONE * 0.21 * mul
+			b.scale = Vector2.ONE * 0.25 * mul
 			b.radius = 17.0 * mul
 		"pmissile":
 			b.frames = Art.apply_sheet(b, "missile", true)
@@ -113,8 +126,8 @@ func _style(b: Bullet, style: String, mul: float) -> void:
 			b.radius = 18.0 * mul
 		_:
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
-			b.scale = Vector2.ONE * 0.158 * mul
-			b.radius = 9.6 * mul
+			b.scale = Vector2.ONE * 0.19 * mul
+			b.radius = 10.4 * mul
 	b.anim_fps = 14.0
 
 
@@ -137,6 +150,14 @@ func _update_enemy_team(dt: float) -> void:
 	while i >= 0:
 		var b: Bullet = _live[i]
 		var keep := b.step(dt, ppos)
+		if keep and b.split_after > 0.0 and b.age >= b.split_after:
+			# Retire the carrier and emit its payload from where it burst.
+			var spec := b.split_spec
+			var at := b.position
+			_retire(i, b)
+			Patterns.emit(self, spec, at, 0, ppos)
+			i -= 1
+			continue
 		if keep and is_instance_valid(player) and b.delay <= 0.0:
 			var d2 := b.position.distance_squared_to(ppos)
 			var rr := hit_r + b.radius

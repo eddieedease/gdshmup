@@ -62,7 +62,7 @@ const TYPES := {
 		"move": {"type": "drift", "speed": 95.0, "track": 65.0},
 		"attacks": [{
 			"pattern": "homing", "n": 2, "spread": 130.0, "speed": 130.0,
-			"style": "missile", "color": "amber", "start": 1.0, "interval": 2.1,
+			"style": "missile", "color": "ember", "start": 1.0, "interval": 2.1,
 			"homing": 130.0, "homing_time": 1.8,
 		}],
 		"drop": "power",
@@ -99,7 +99,7 @@ const TYPES := {
 		"move": {"type": "line", "dir": 90.0, "speed": 95.0},
 		"attacks": [{
 			"pattern": "wall", "n": 15, "gap": 3, "speed": 195.0,
-			"style": "small", "color": "amber", "start": 1.1, "interval": 2.0,
+			"style": "small", "color": "ember", "start": 1.1, "interval": 2.0,
 		}],
 		"drop": "bomb",
 	},
@@ -129,6 +129,84 @@ const TYPES := {
 			"interval": 0.10, "count": 9, "flash": false,
 		}],
 		"drop": "star",
+	},
+	# --- Variants introduced for the space stages ----------------------------
+	"SNIPER": {
+		# Holds high and telegraphs single very fast shots: punishes idling.
+		"tex": 6, "hp": 70, "scale": 0.24, "radius": 21, "score": 500,
+		"move": {
+			"type": "enter_hold_exit", "enter": 1.0, "hold": 6.0,
+			"exit_dir": 90.0, "exit_speed": 330.0, "bob": 8.0,
+		},
+		"attacks": [{
+			"pattern": "sniper", "speed": 620.0, "delay": 0.85,
+			"style": "needle", "color": "white", "start": 1.2, "interval": 1.6,
+		}],
+		"drop": "star",
+	},
+	"SPLITTER": {
+		# Dies into two escorts, so clearing it is not the end of the exchange.
+		"tex": 2, "hp": 55, "scale": 0.26, "radius": 24, "score": 450,
+		"move": {"type": "sine", "dir": 90.0, "speed": 140.0, "amp": 70.0,
+			"freq": 1.7},
+		"attacks": [{
+			"pattern": "nway", "n": 4, "spread": 60.0, "speed": 210.0,
+			"style": "small", "color": "teal", "start": 0.9, "interval": 1.5,
+		}],
+		"spawn_on_death": {"type": "POPCORN", "count": 2, "spread": 150.0},
+		"drop": "star",
+	},
+	"ORBITER": {
+		# Circles a point overhead while streaming weaving fire.
+		"tex": 5, "hp": 60, "scale": 0.23, "radius": 20, "score": 480,
+		"face": "vel",
+		"move": {"type": "arc", "radius": 190.0, "omega": 1.6},
+		"attacks": [{
+			"pattern": "helix", "speed": 230.0, "wave": 34.0, "wave_freq": 7.0,
+			"style": "small", "color": "indigo", "flash": false,
+			"start": 0.8, "interval": 0.22,
+		}],
+		"drop": "star",
+	},
+	"MINELAYER": {
+		# Seeds delayed bullets across the field: forces you to keep moving.
+		"tex": 4, "hp": 130, "scale": 0.30, "radius": 29, "score": 900,
+		"move": {"type": "line", "dir": 90.0, "speed": 85.0},
+		"attacks": [{
+			"pattern": "minefield", "n": 5, "speed": 250.0, "delay": 1.3,
+			"style": "orb", "color": "violet", "start": 1.0, "interval": 2.6,
+		}],
+		"drop": "bomb",
+	},
+	"SEEDER": {
+		# Lobs scatter carriers that burst into rings mid-screen.
+		"tex": 8, "hp": 110, "scale": 0.28, "radius": 26, "score": 800,
+		"move": {
+			"type": "enter_hold_exit", "enter": 1.2, "hold": 6.5,
+			"exit_dir": 90.0, "exit_speed": 280.0,
+		},
+		"attacks": [{
+			"pattern": "scatter", "n": 3, "spread": 46.0, "speed": 205.0,
+			"fuse": 1.1, "style": "seed", "color": "pink",
+			"start": 1.3, "interval": 2.4,
+			"burst": {"pattern": "ring", "n": 9, "speed": 205.0,
+				"style": "small", "color": "pink", "aim": false},
+		}],
+		"drop": "power",
+	},
+	"BLADE": {
+		# Rotating straight arms that sweep the arena like a fan.
+		"tex": 3, "hp": 120, "scale": 0.28, "radius": 26, "score": 850,
+		"move": {
+			"type": "enter_hold_exit", "enter": 1.2, "hold": 7.0,
+			"exit_dir": 90.0, "exit_speed": 280.0,
+		},
+		"attacks": [{
+			"pattern": "pinwheel", "arms": 4, "n": 5, "speed": 250.0,
+			"arm_gap": 26.0, "rot": 17.0, "style": "shard", "color": "cyan",
+			"aim": false, "start": 1.4, "interval": 0.5,
+		}],
+		"drop": "power",
 	},
 	"WARDEN": {
 		"tex": 7, "hp": 1800, "scale": 0.46, "radius": 46, "score": 6000,

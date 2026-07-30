@@ -124,11 +124,22 @@ const THROTTLE := {
 	"pop": 0.03,
 }
 
-const MUSIC := {
-	"title": preload("res://assets/music/title_screen.mp3"),
-	"level1": preload("res://assets/music/level1.mp3"),
-	"level2": preload("res://assets/music/level2.mp3"),
-	"level3": preload("res://assets/music/level3.mp3"),
+## Tracks are resolved at runtime rather than preloaded so a stage can ship
+## before its music does: drop `level4.mp3` into assets/music and it is picked
+## up with no code change. Missing tracks fall back per MUSIC_FALLBACK.
+const MUSIC_PATHS := {
+	"title": "res://assets/music/title_screen.mp3",
+	"level1": "res://assets/music/level1.mp3",
+	"level2": "res://assets/music/level2.mp3",
+	"level3": "res://assets/music/level3.mp3",
+	"level4": "res://assets/music/level4.mp3",
+	"level5": "res://assets/music/level5.mp3",
+}
+
+## Reuse an earlier stage's track when a later one is not present yet.
+const MUSIC_FALLBACK := {
+	"level4": "level2",
+	"level5": "level3",
 }
 
 var _bank: Dictionary = {}
@@ -139,6 +150,7 @@ var _last: Dictionary = {}
 var _music: AudioStreamPlayer
 var _laser: AudioStreamPlayer
 var _drone: AudioStreamPlayer
+var _music_cache: Dictionary = {}
 var _music_key := ""
 var _fade: Tween
 
@@ -249,9 +261,9 @@ func play_music(key: String, fade: float = 0.8) -> void:
 	if _music_key == key and _music.playing:
 		return
 	_music_key = key
-	if not MUSIC.has(key):
+	var stream := _resolve_music(key)
+	if stream == null:
 		return
-	var stream: AudioStream = MUSIC[key]
 	if stream is AudioStreamMP3:
 		stream.loop = true
 	if _fade != null and _fade.is_valid():
@@ -261,6 +273,26 @@ func play_music(key: String, fade: float = 0.8) -> void:
 	_music.play()
 	_fade = create_tween()
 	_fade.tween_property(_music, "volume_db", music_db(), fade)
+
+
+## Loads (and caches) a track, walking MUSIC_FALLBACK when the file is absent.
+func _resolve_music(key: String) -> AudioStream:
+	if _music_cache.has(key):
+		return _music_cache[key]
+	var k := key
+	var hops := 0
+	while hops < 4:
+		var path := String(MUSIC_PATHS.get(k, ""))
+		if path != "" and ResourceLoader.exists(path):
+			var res: AudioStream = load(path)
+			_music_cache[key] = res
+			return res
+		if not MUSIC_FALLBACK.has(k):
+			break
+		k = String(MUSIC_FALLBACK[k])
+		hops += 1
+	_music_cache[key] = null
+	return null
 
 
 func stop_music(fade: float = 0.6) -> void:

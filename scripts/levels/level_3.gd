@@ -1,13 +1,13 @@
 class_name Level3
 extends RefCounted
 ## Stage 3 - GLACIER CORE.
-## Everything at once: layered curtains, lock-on volleys, relentless pressure.
+## Layered curtains, lock-on volleys and the first sustained pressure.
 
 const W := Cfg.FIELD_W
 
 
 func run(d: Director) -> void:
-	d.banner("FINAL STAGE", "GLACIER CORE")
+	d.banner("STAGE 3", "GLACIER CORE")
 	await d.wait(3.2)
 
 	# 1. Immediate pressure - three overlapping ranks.
@@ -55,7 +55,7 @@ func run(d: Director) -> void:
 			"hp": 130,
 			"move": {"type": "line", "dir": 90.0, "speed": 78.0},
 			"attacks": [{"pattern": "wall", "n": 17, "gap": 3, "speed": 225.0,
-				"style": "small", "color": ["amber", "pink", "green"][i],
+				"style": "small", "color": ["ember", "pink", "green"][i],
 				"start": 0.9 + 0.55 * i, "interval": 1.9}],
 		})
 		await d.wait(0.6)
@@ -86,7 +86,7 @@ func run(d: Director) -> void:
 		d.one("SEEKER", Vector2(W * (0.15 + 0.175 * i), Cfg.SPAWN_Y), {
 			"hp": 60,
 			"attacks": [{"pattern": "homing", "n": 2, "spread": 140.0,
-				"speed": 140.0, "style": "missile", "color": "amber",
+				"speed": 140.0, "style": "missile", "color": "ember",
 				"homing": 160.0, "homing_time": 2.0, "start": 0.9,
 				"interval": 1.8}],
 		})

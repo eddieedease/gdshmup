@@ -34,9 +34,21 @@ Destroying enemies without a gap builds a **chain**; the multiplier climbs to
 x6 and resets ~1.35s after you stop landing damage. Grazing bullets, collecting
 stars and bombing bullets off the screen all add score. Extends at 2M / 5M / 10M.
 
+## Stages
+
+Five stages: three over terrain, then two in vacuum. The space themes are
+procedural (starfield, drifting nebula bands, tumbling debris built from the
+rock tiles) since the asset pack has no space art — see the `space` flag in
+`Terrain.PALETTES`.
+
+Music is resolved at runtime, so dropping `levelN.mp3` into `assets/music`
+is all that is needed to score a new stage.
+
 ## Power and hyper
 
-Power runs to **12 levels across three bars**. Bar one is the old full-power
+Power items are **chips**, and each bar costs more per level (2 / 3 / 4), so
+full power lands around stage three rather than stage one. Power runs to
+**12 levels across three bars**. Bar one is the old full-power
 ramp; bar two adds a wide secondary volley and a third option bit, bar three a
 swept-back pair and a fourth bit. Option bits share one damage budget, so the
 extra bits widen your coverage rather than multiplying raw damage.

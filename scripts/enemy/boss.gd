@@ -50,6 +50,7 @@ func setup_boss(def: Dictionary, _difficulty: Dictionary = {}) -> void:
 		"score": int(def.get("score", 100000)),
 		"face": "down",
 		"cull_grace": 99999.0,
+		"no_reveal": true,
 		"z": Cfg.Z_ENEMY + 1,
 		"move": {"type": "approach", "to": def.get("anchor",
 			Vector2(Cfg.FIELD_W * 0.5, 260.0)), "time": INTRO_TIME},

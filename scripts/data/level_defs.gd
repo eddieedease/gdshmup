@@ -1,7 +1,11 @@
 class_name LevelDefs
 extends RefCounted
 ## Stage metadata: which script runs, which terrain palette to scroll, and how
-## hard the enemies hit. Difficulty is applied uniformly by Director.
+## hard the enemies hit. Difficulty is applied uniformly by Director to the
+## reusable enemy archetypes; bosses ignore it and carry authored numbers.
+##
+## The curve is stretched over five stages rather than three, so the early
+## multipliers are gentler than they were and the top end climbs further.
 
 const STAGES := [
 	{
@@ -14,13 +18,25 @@ const STAGES := [
 		"title": "STAGE 2",
 		"name": "SCORCHED FLATS",
 		"terrain": 1,
-		"difficulty": {"hp": 1.7, "fire_rate": 1.22, "speed": 1.1},
+		"difficulty": {"hp": 1.6, "fire_rate": 1.18, "speed": 1.08},
+	},
+	{
+		"title": "STAGE 3",
+		"name": "GLACIER CORE",
+		"terrain": 2,
+		"difficulty": {"hp": 2.3, "fire_rate": 1.32, "speed": 1.16},
+	},
+	{
+		"title": "STAGE 4",
+		"name": "ORBITAL DEBRIS",
+		"terrain": 3,
+		"difficulty": {"hp": 3.1, "fire_rate": 1.44, "speed": 1.24},
 	},
 	{
 		"title": "FINAL STAGE",
-		"name": "GLACIER CORE",
-		"terrain": 2,
-		"difficulty": {"hp": 2.6, "fire_rate": 1.45, "speed": 1.2},
+		"name": "VOID CORE",
+		"terrain": 4,
+		"difficulty": {"hp": 4.0, "fire_rate": 1.56, "speed": 1.32},
 	},
 ]
 
@@ -39,5 +55,9 @@ static func script_for(i: int) -> RefCounted:
 			return Level1.new()
 		1:
 			return Level2.new()
-		_:
+		2:
 			return Level3.new()
+		3:
+			return Level4.new()
+		_:
+			return Level5.new()

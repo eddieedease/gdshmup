@@ -245,6 +245,12 @@ func set_ship(ship: Dictionary) -> void:
 
 
 ## `hyper` is 0..1 charge; `hyper_active` swaps the meter to a countdown.
+## Progress toward the next power level (chips banked), 0..1.
+func set_power_progress(frac: float) -> void:
+	_power_bar.progress = frac
+	_power_bar.queue_redraw()
+
+
 func set_hyper(charge: float, hyper_active: bool) -> void:
 	_hyper_bar.value = charge
 	_hyper_bar.col = Color(1.0, 0.85, 0.35) if hyper_active \
@@ -381,6 +387,8 @@ class Segments:
 	extends Control
 	var value := 1
 	var total := Cfg.MAX_POWER
+	## Fill of the *next* segment, so banked chips are visible before a level.
+	var progress := 0.0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -403,6 +411,10 @@ class Segments:
 				draw_rect(r, col)
 			else:
 				draw_rect(r, Color(1, 1, 1, 0.09))
+				if i == value and progress > 0.0:
+					draw_rect(Rect2(r.position,
+						Vector2(r.size.x * progress, r.size.y)),
+						Color(1, 1, 1, 0.30))
 			draw_rect(r, Color(1, 1, 1, 0.18), false, 1.0)
 			x += w + (bar_gap if (i + 1) % per == 0 else gap)
 

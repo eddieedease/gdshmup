@@ -46,6 +46,34 @@ const PALETTES := [
 		"decor": ["stone", "wood"],
 		"speed": 148.0,
 	},
+	# Stages 4 and 5 leave the ground behind. There is no space art in the
+	# asset pack, so `space` swaps the tile grid for a procedural starfield and
+	# nebula, and reuses rock tiles as tumbling debris silhouettes.
+	{
+		"name": "ORBITAL DEBRIS",
+		"tint": Color(0.62, 0.72, 1.0),
+		"space": true,
+		"nebula": [Color(0.10, 0.16, 0.40), Color(0.24, 0.12, 0.38)],
+		"bands": [],
+		"decor": ["stone", "cobble"],
+		"speed": 168.0,
+	},
+	{
+		"name": "VOID CORE",
+		"tint": Color(1.0, 0.68, 0.80),
+		"space": true,
+		"nebula": [Color(0.30, 0.05, 0.18), Color(0.12, 0.04, 0.26)],
+		"bands": [],
+		"decor": ["stone", "wood"],
+		"speed": 196.0,
+	},
+]
+
+## Starfield layers used in space mode: [count, speed multiplier, radius, alpha].
+const STAR_LAYERS := [
+	[70, 0.35, 1.0, 0.40],
+	[46, 0.70, 1.6, 0.62],
+	[26, 1.25, 2.4, 0.90],
 ]
 
 var speed := 92.0
@@ -58,6 +86,10 @@ var _detail := FastNoiseLite.new()
 var _palette: Dictionary = PALETTES[0]
 var _decor: Array[Sprite2D] = []
 var _decor_y: PackedFloat32Array = PackedFloat32Array()
+var _space := false
+var _stars: Array[Vector3] = []      ## x, y, layer index.
+var _star_spin: PackedFloat32Array = PackedFloat32Array()
+var _decor_spin: PackedFloat32Array = PackedFloat32Array()
 
 
 func _ready() -> void:
@@ -88,11 +120,17 @@ func _ready() -> void:
 		add_child(d)
 		_decor.append(d)
 		_decor_y.append(0.0)
+		_decor_spin.append(0.0)
 
 
 func set_stage(index: int, seed_value: int) -> void:
 	_palette = PALETTES[clampi(index, 0, PALETTES.size() - 1)]
 	speed = _palette.speed
+	_space = bool(_palette.get("space", false))
+	for t in _tiles:
+		t.visible = not _space
+	if _space:
+		_seed_stars()
 	_noise.seed = seed_value
 	_detail.seed = seed_value * 7 + 13
 	for i in ROWS:
@@ -106,11 +144,32 @@ func set_stage(index: int, seed_value: int) -> void:
 		d.position.x = randf_range(0.0, Cfg.FIELD_W)
 		_decor_y[i] = randf_range(-Cfg.FIELD_H, Cfg.FIELD_H)
 		d.rotation = 0.0
+		# Debris tumbles; ground silhouettes stay level.
+		_decor_spin[i] = randf_range(-0.8, 0.8) if _space else 0.0
+		d.modulate = Color(0.26, 0.28, 0.38, 0.62) if _space \
+			else Color(0, 0, 0, 0.16)
+
+
+## Scatters a fresh starfield across the field plus one screen of lead-in.
+func _seed_stars() -> void:
+	_stars.clear()
+	_star_spin.resize(0)
+	for layer in STAR_LAYERS.size():
+		var count := int(STAR_LAYERS[layer][0])
+		for i in count:
+			_stars.append(Vector3(
+				randf_range(0.0, Cfg.FIELD_W),
+				randf_range(-Cfg.FIELD_H, Cfg.FIELD_H),
+				float(layer)))
+			_star_spin.append(randf())
 
 
 func _process(dt: float) -> void:
 	_scroll += speed * dt
-	_refresh()
+	if _space:
+		_step_stars(dt)
+	else:
+		_refresh()
 	var dspeed := speed * 1.65
 	for i in _decor.size():
 		_decor_y[i] += dspeed * dt
@@ -118,6 +177,42 @@ func _process(dt: float) -> void:
 			_decor_y[i] = randf_range(-600.0, -200.0)
 			_decor[i].position.x = randf_range(0.0, Cfg.FIELD_W)
 		_decor[i].position.y = _decor_y[i]
+		if _decor_spin[i] != 0.0:
+			_decor[i].rotation += _decor_spin[i] * dt
+
+
+func _step_stars(dt: float) -> void:
+	for i in _stars.size():
+		var st := _stars[i]
+		st.y += speed * float(STAR_LAYERS[int(st.z)][1]) * dt
+		if st.y > Cfg.FIELD_H + 8.0:
+			st.y = randf_range(-40.0, -4.0)
+			st.x = randf_range(0.0, Cfg.FIELD_W)
+		_stars[i] = st
+	queue_redraw()
+
+
+## Space mode paints itself: soft nebula bands, then parallax stars over them.
+func _draw() -> void:
+	if not _space:
+		return
+	var neb: Array = _palette.get("nebula", [Color(0.1, 0.12, 0.3)])
+	for i in 7:
+		var t := float(i) / 6.0
+		var col: Color = (neb[0] as Color).lerp(neb[neb.size() - 1], t)
+		col.a = 0.30 - 0.03 * i
+		# Wide soft bands drifting with the scroll.
+		var y := fmod(_scroll * 0.25 + i * 210.0, Cfg.FIELD_H + 420.0) - 210.0
+		draw_rect(Rect2(Vector2(-40.0, y), Vector2(Cfg.FIELD_W + 80.0, 150.0)), col)
+
+	var tint: Color = _palette.tint
+	for i in _stars.size():
+		var st := _stars[i]
+		var layer: Array = STAR_LAYERS[int(st.z)]
+		var twinkle: float = 0.65 + 0.35 * sin(
+			(_scroll * 0.02) + _star_spin[i] * TAU)
+		draw_circle(Vector2(st.x, st.y), float(layer[2]),
+			Color(tint.r, tint.g, tint.b, float(layer[3]) * twinkle))
 
 
 ## The ship flies north, so the ground has to travel *down* the screen: tile Y
@@ -139,6 +234,8 @@ func _refresh() -> void:
 func _fill_row(slot: int, world_row: int) -> void:
 	var tint: Color = _palette.tint
 	var bands: Array = _palette.bands
+	if bands.is_empty():
+		return   # Space palettes have no tiles to fill.
 	for c in COLS:
 		var t := _tiles[slot * COLS + c]
 		# Negative row index so the world reads as scrolling toward the player.

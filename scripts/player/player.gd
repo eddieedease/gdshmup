@@ -43,6 +43,8 @@ var ship_index := 0
 var colour := Color.WHITE
 
 var power := 1
+## Chips banked toward the next power level; see Cfg.POWER_CHIP_COST.
+var power_chips := 0
 var bombs := 3
 var state: int = State.ALIVE
 
@@ -199,12 +201,29 @@ func bomb_active() -> bool:
 	return bomb_time > 0.0
 
 
+## Banks `n` chips and levels up whenever the current bar's cost is met.
+## Returns true if a level was actually gained.
 func add_power(n: int = 1) -> bool:
 	if power >= Cfg.MAX_POWER:
 		return false
-	power = mini(Cfg.MAX_POWER, power + n)
-	_refresh_beams()
-	return true
+	power_chips += n
+	var gained := false
+	while power < Cfg.MAX_POWER and power_chips >= Cfg.chip_cost(power):
+		power_chips -= Cfg.chip_cost(power)
+		power += 1
+		gained = true
+	if power >= Cfg.MAX_POWER:
+		power_chips = 0
+	if gained:
+		_refresh_beams()
+	return gained
+
+
+## Progress toward the next level, 0..1, for the HUD.
+func chip_fraction() -> float:
+	if power >= Cfg.MAX_POWER:
+		return 1.0
+	return clampf(float(power_chips) / float(Cfg.chip_cost(power)), 0.0, 1.0)
 
 
 func _exit_tree() -> void:
@@ -322,7 +341,7 @@ func _fire_shot(dt: float) -> void:
 			var o := _options[i]
 			if String(ship.opt_mode) == "missile":
 				var m := bullets.spawn(o.position, -PI * 0.5 + o.side * 0.5, 420.0,
-					"pmissile", Color(1, 0.9, 0.6))
+					"pmissile", colour.lightened(0.25))
 				if m:
 					m.damage = odmg
 					m.homing = 300.0 * PI / 180.0
@@ -449,6 +468,7 @@ func hit() -> void:
 	AU.set_laser(false)
 	AU.play("death")
 	power = maxi(1, power - DEATH_POWER_LOSS)
+	power_chips = 0
 	_refresh_beams()
 	life_lost.emit()
 

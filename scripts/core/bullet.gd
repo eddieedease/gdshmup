@@ -62,6 +62,12 @@ var frames := 1
 var grazed := false
 var scored := false     ## Marks bullets already converted by a bomb.
 
+## Scatter bullets: after `split_after` seconds the manager replaces this bullet
+## with the volley described by `split_spec`. A whole new class of threat for the
+## cost of two fields.
+var split_after := 0.0
+var split_spec: Dictionary = {}
+
 ## Pulse state. `base_scale`/`base_color` are the values the pulse modulates
 ## around, set once at spawn.
 var base_scale := Vector2.ONE
@@ -90,6 +96,9 @@ func reset() -> void:
 	face_dir = true
 	grazed = false
 	scored = false
+	split_after = 0.0
+	if not split_spec.is_empty():
+		split_spec = {}
 	modulate = Color.WHITE
 	rotation = 0.0
 	# Random phase: a synchronised pulse across hundreds of bullets reads as a
@@ -110,7 +119,10 @@ func kill() -> void:
 func _apply_pulse(alpha: float) -> void:
 	var k := sin(age * PULSE_RATE + pulse_phase)
 	scale = base_scale * (1.0 + PULSE_SCALE * k)
-	var b := 1.0 + PULSE_BRIGHT * k
+	# BULLET_GAIN lifts the whole palette above the background; values over 1
+	# clip toward white on the brightest pixels, which is exactly the hot-core
+	# look a bullet wants.
+	var b := (1.0 + PULSE_BRIGHT * k) * Cfg.BULLET_GAIN
 	modulate = Color(base_color.r * b, base_color.g * b, base_color.b * b,
 		base_color.a * alpha)
 

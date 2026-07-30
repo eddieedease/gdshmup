@@ -12,8 +12,12 @@ static func get_boss(stage: int) -> Dictionary:
 			return _arbiter()
 		1:
 			return _colossus()
-		_:
+		2:
 			return _omega()
+		3:
+			return _harbinger()
+		_:
+			return _singularity()
 
 
 # --- Stage 1: ARBITER --------------------------------------------------------
@@ -52,7 +56,7 @@ static func _arbiter() -> Dictionary:
 						"style": "tiny", "color": "violet", "flash": false,
 						"start": 1.0, "interval": 0.18},
 					{"pattern": "wall", "n": 13, "gap": 4, "speed": 195.0,
-						"style": "small", "color": "amber",
+						"style": "small", "color": "ember",
 						"start": 2.6, "interval": 3.4, "oy": -120.0},
 				],
 			},
@@ -98,7 +102,7 @@ static func _colossus() -> Dictionary:
 						"speed": 215.0, "style": "small", "color": "green",
 						"aim": false, "start": 1.0, "interval": 1.7, "rot": 7.0},
 					{"pattern": "homing", "n": 2, "spread": 150.0, "speed": 120.0,
-						"style": "missile", "color": "amber", "homing": 140.0,
+						"style": "missile", "color": "ember", "homing": 140.0,
 						"homing_time": 2.0, "start": 2.5, "interval": 3.2},
 				],
 			},
@@ -167,7 +171,7 @@ static func _omega() -> Dictionary:
 					"amp_x": 270.0, "amp_y": 80.0, "freq_x": 1.4, "freq_y": 2.2},
 				"attacks": [
 					{"pattern": "wall", "n": 17, "gap": 3, "speed": 235.0,
-						"style": "small", "color": "amber", "start": 1.0,
+						"style": "small", "color": "ember", "start": 1.0,
 						"interval": 1.5, "oy": -150.0},
 					{"pattern": "dual_spiral", "n": 3, "speed": 215.0, "rot": 12.0,
 						"style": "tiny", "color": "violet", "flash": false,
@@ -186,7 +190,7 @@ static func _omega() -> Dictionary:
 						"speed": 230.0, "style": "tiny", "color": "green",
 						"aim": false, "start": 1.6, "interval": 1.4, "rot": 11.0},
 					{"pattern": "homing", "n": 3, "spread": 160.0, "speed": 130.0,
-						"style": "missile", "color": "amber", "homing": 160.0,
+						"style": "missile", "color": "ember", "homing": 160.0,
 						"homing_time": 2.2, "start": 3.0, "interval": 3.4},
 				],
 			},
@@ -209,6 +213,175 @@ static func _omega() -> Dictionary:
 					{"pattern": "rain", "n": 3, "speed": 290.0, "style": "small",
 						"color": "pink", "flash": false, "start": 2.0,
 						"interval": 0.45},
+				],
+			},
+		],
+	}
+
+
+# --- Stage 4: HARBINGER ------------------------------------------------------
+
+static func _harbinger() -> Dictionary:
+	return {
+		"name": "HARBINGER",
+		"tex": 5,
+		"scale": 1.20,
+		"radius": 90.0,
+		"score": 700_000,
+		"anchor": Vector2(Cfg.FIELD_W * 0.5, 250.0),
+		# Built around the new vocabulary: unfurling rings, scatter carriers and
+		# sniper tells, so it plays unlike the first three bosses.
+		"phases": [
+			{
+				"hp": 5200,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 250.0),
+					"amp_x": 225.0, "amp_y": 45.0, "freq_x": 0.85, "freq_y": 1.4},
+				"attacks": [
+					{"pattern": "unfurl", "n": 20, "speed": 225.0, "stagger": 0.03,
+						"delay": 0.3, "style": "small", "color": "indigo",
+						"aim": false, "start": 1.2, "interval": 2.2},
+					{"pattern": "sniper", "speed": 640.0, "delay": 0.8,
+						"style": "needle", "color": "white", "start": 2.6,
+						"interval": 2.0},
+				],
+			},
+			{
+				"hp": 5600,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 235.0),
+					"amp_x": 255.0, "amp_y": 70.0, "freq_x": 1.2, "freq_y": 1.9},
+				"attacks": [
+					{"pattern": "scatter", "n": 3, "spread": 54.0, "speed": 210.0,
+						"fuse": 1.05, "style": "seed", "color": "pink",
+						"start": 1.0, "interval": 2.3,
+						"burst": {"pattern": "ring", "n": 10, "speed": 210.0,
+							"style": "small", "color": "pink", "aim": false}},
+					{"pattern": "helix", "speed": 235.0, "wave": 38.0,
+						"wave_freq": 6.5, "style": "small", "color": "teal",
+						"flash": false, "start": 0.8, "interval": 0.22},
+				],
+			},
+			{
+				"hp": 6000,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 245.0),
+					"amp_x": 215.0, "amp_y": 85.0, "freq_x": 1.5, "freq_y": 2.2},
+				"attacks": [
+					{"pattern": "pinwheel", "arms": 5, "n": 6, "speed": 255.0,
+						"arm_gap": 24.0, "rot": 16.0, "style": "shard",
+						"color": "cyan", "aim": false, "start": 0.9,
+						"interval": 0.44},
+					{"pattern": "minefield", "n": 4, "speed": 265.0, "delay": 1.2,
+						"style": "orb", "color": "violet", "start": 2.2,
+						"interval": 3.0},
+				],
+			},
+			{
+				"hp": 6400,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 255.0),
+					"amp_x": 240.0, "amp_y": 60.0, "freq_x": 1.9, "freq_y": 2.7},
+				"attacks": [
+					{"pattern": "bloom", "n": 22, "speed": 450.0, "accel": -570.0,
+						"speed_min": -190.0, "style": "orb", "color": "cyan",
+						"aim": false, "start": 0.9, "interval": 2.2},
+					{"pattern": "gatling", "speed": 390.0, "spread": 8.0,
+						"style": "needle", "color": "white", "flash": false,
+						"start": 1.6, "interval": 0.10},
+					{"pattern": "wave_wall", "n": 12, "speed": 210.0, "wave": 44.0,
+						"style": "small", "color": "ember", "start": 3.0,
+						"interval": 3.2, "oy": -150.0},
+				],
+			},
+		],
+	}
+
+
+# --- Stage 5: SINGULARITY ----------------------------------------------------
+
+static func _singularity() -> Dictionary:
+	return {
+		"name": "SINGULARITY",
+		"tex": 7,
+		"scale": 1.40,
+		"radius": 104.0,
+		"score": 1_200_000,
+		"anchor": Vector2(Cfg.FIELD_W * 0.5, 260.0),
+		# Five phases, each stacking one more simultaneous threat than the last.
+		"phases": [
+			{
+				"hp": 5600,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 260.0),
+					"amp_x": 230.0, "amp_y": 45.0, "freq_x": 0.9, "freq_y": 1.5},
+				"attacks": [
+					{"pattern": "dual_spiral", "n": 3, "speed": 210.0, "rot": 10.0,
+						"style": "tiny", "color": "violet", "flash": false,
+						"start": 0.8, "interval": 0.10},
+					{"pattern": "sniper", "speed": 660.0, "delay": 0.75,
+						"style": "needle", "color": "white", "start": 2.4,
+						"interval": 1.8},
+				],
+			},
+			{
+				"hp": 6000,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 240.0),
+					"amp_x": 265.0, "amp_y": 75.0, "freq_x": 1.3, "freq_y": 2.0},
+				"attacks": [
+					{"pattern": "unfurl", "n": 22, "speed": 230.0, "stagger": 0.028,
+						"delay": 0.26, "style": "small", "color": "indigo",
+						"aim": false, "start": 1.0, "interval": 2.0},
+					{"pattern": "pinwheel", "arms": 4, "n": 6, "speed": 250.0,
+						"arm_gap": 24.0, "rot": -18.0, "style": "shard",
+						"color": "teal", "aim": false, "start": 1.8,
+						"interval": 0.48},
+				],
+			},
+			{
+				"hp": 6400,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 255.0),
+					"amp_x": 220.0, "amp_y": 90.0, "freq_x": 1.7, "freq_y": 2.4},
+				"attacks": [
+					{"pattern": "scatter", "n": 4, "spread": 66.0, "speed": 205.0,
+						"fuse": 0.95, "style": "seed", "color": "pink",
+						"start": 0.9, "interval": 2.1,
+						"burst": {"pattern": "ring", "n": 11, "speed": 220.0,
+							"style": "small", "color": "pink", "aim": false}},
+					{"pattern": "lockon", "n": 8, "radius": 280.0, "speed": 320.0,
+						"style": "small", "color": "red", "delay": 0.6,
+						"start": 2.2, "interval": 2.4},
+				],
+			},
+			{
+				"hp": 6800,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 245.0),
+					"amp_x": 250.0, "amp_y": 70.0, "freq_x": 2.0, "freq_y": 2.8},
+				"attacks": [
+					{"pattern": "flower", "n": 30, "petals": 6, "variance": 0.55,
+						"speed": 235.0, "style": "tiny", "color": "green",
+						"aim": false, "start": 1.0, "interval": 1.4, "rot": 12.0},
+					{"pattern": "minefield", "n": 5, "speed": 275.0, "delay": 1.1,
+						"style": "orb", "color": "violet", "start": 2.0,
+						"interval": 2.6},
+					{"pattern": "gatling", "speed": 400.0, "spread": 9.0,
+						"style": "needle", "color": "white", "flash": false,
+						"start": 1.4, "interval": 0.10},
+				],
+			},
+			{
+				"hp": 7200,
+				"move": {"type": "sway", "centre": Vector2(Cfg.FIELD_W * 0.5, 260.0),
+					"amp_x": 235.0, "amp_y": 55.0, "freq_x": 2.3, "freq_y": 3.1},
+				"attacks": [
+					{"pattern": "bloom", "n": 28, "speed": 480.0, "accel": -610.0,
+						"speed_min": -215.0, "style": "orb", "color": "cyan",
+						"aim": false, "start": 0.8, "interval": 1.9},
+					{"pattern": "vortex", "n": 20, "speed": 125.0, "accel": 135.0,
+						"speed_max": 385.0, "curve": -52.0, "style": "tiny",
+						"color": "violet", "aim": false, "start": 1.3,
+						"interval": 1.1, "rot": 26.0},
+					{"pattern": "wave_wall", "n": 13, "speed": 220.0, "wave": 48.0,
+						"style": "small", "color": "ember", "start": 2.2,
+						"interval": 2.8, "oy": -160.0},
+					{"pattern": "rain", "n": 3, "speed": 300.0, "style": "small",
+						"color": "pink", "flash": false, "start": 2.6,
+						"interval": 0.42},
 				],
 			},
 		],

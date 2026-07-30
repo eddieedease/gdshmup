@@ -324,7 +324,27 @@ func _on_enemy_died(e: Enemy) -> void:
 	if e.score >= 500:
 		_fx.popup(e.position, Cfg.fmt_score(gained), Cfg.UI_GOLD, 24)
 	_shake = maxf(_shake, clampf(e.score / 3000.0, 0.6, 9.0))
+	_spawn_on_death(e)
 	_drop_for(e)
+
+
+## Some enemies leave escorts behind when they burst (see SPLITTER).
+func _spawn_on_death(e: Enemy) -> void:
+	var spec: Variant = e.spec.get("spawn_on_death", null)
+	if not (spec is Dictionary) or over:
+		return
+	var count := int(spec.get("count", 2))
+	var spread := float(spec.get("spread", 150.0))
+	for i in count:
+		var t := 0.0 if count == 1 else float(i) / float(count - 1) - 0.5
+		var child := EnemyDefs.make(String(spec.get("type", "POPCORN")), {
+			# Already on screen, so skip the reveal grace.
+			"no_reveal": true,
+			"move": {"type": "line", "dir": 90.0 + t * spread, "speed": 260.0},
+		})
+		var child_enemy := Enemy.new()
+		child_enemy.setup(child, e.position, _director.difficulty)
+		add_enemy(child_enemy)
 
 
 func _drop_for(e: Enemy) -> void:
@@ -438,6 +458,7 @@ func _process(dt: float) -> void:
 	_hud.set_status(_player.power, maxi(lives_left, 0), _player.bombs, graze,
 		_ebm.live_count())
 	_hud.set_hyper(_player.hyper_charge, _player.is_hyper())
+	_hud.set_power_progress(_player.chip_fraction())
 
 
 ## Ramming an enemy hull is fatal. The hull box is deliberately smaller than the
@@ -490,11 +511,14 @@ func _collect(it: Item) -> void:
 	match it.kind:
 		Item.Kind.POWER:
 			AU.play("powerup")
-			if _player.add_power(1):
-				_fx.popup(it.position, "POWER UP", Color(1, 0.6, 0.35), 22)
-			else:
+			if _player.power >= Cfg.MAX_POWER:
 				_add_score(10_000)
 				_fx.popup(it.position, "10,000", Cfg.UI_GOLD, 20)
+			elif _player.add_power(1):
+				_fx.popup(it.position, "POWER UP", Color(1, 0.6, 0.35), 22)
+			else:
+				# Chip banked but no level yet - still show it landed.
+				_fx.popup(it.position, "+1", Color(1, 0.6, 0.35), 18)
 		Item.Kind.BOMB:
 			AU.play("powerup", 0.05)
 			if _player.bombs < 8:
