@@ -242,8 +242,10 @@ func set_chain(hits: int, frac: float, multiplier: float) -> void:
 		Cfg.UI_ACCENT.lerp(Cfg.UI_GOLD, hot))
 
 
-func set_stage(index: int, total: int, name: String) -> void:
+func set_stage(index: int, total: int, name: String, loop: int = 0) -> void:
 	_l_stage.text = "%d / %d" % [index + 1, total]
+	if loop > 0:
+		_l_stage.text += "  L%d" % (loop + 1)
 	_l_stage_name.text = name
 
 

@@ -27,6 +27,11 @@ var graze := 0
 var chain := 0
 var chain_time := 0.0
 var stage := 0
+## Endless only: how many times the stage list has been completed.
+var loop := 0
+## Endless only: best score reached on any single credit this run. Continues
+## wipe `score`, so this is what the leaderboard actually cares about.
+var best_score := 0
 var over := false
 var cleared := false
 var lives_left := 2
@@ -236,27 +241,49 @@ func shutdown() -> void:
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 
+## Endless multiplies every stage's difficulty again on each lap, so lap three
+## of stage one is meaningfully harder than the first time you saw it.
+func _loop_difficulty(base: Dictionary) -> Dictionary:
+	if loop <= 0:
+		return base
+	var f := pow(1.35, loop)
+	return {
+		"hp": float(base.hp) * f,
+		"fire_rate": float(base.fire_rate) * pow(1.12, loop),
+		"speed": float(base.speed) * pow(1.06, loop),
+	}
+
+
 func _run_stages() -> void:
-	while stage < LevelDefs.count() and not over:
-		var meta := LevelDefs.meta(stage)
+	var endless: bool = GS.mode == GS.Mode.ENDLESS
+	while not over:
+		var idx := stage % LevelDefs.count()
+		var meta := LevelDefs.meta(idx)
 		_terrain.set_stage(int(meta.terrain), 1000 + stage * 977)
 		for d in [_dust, _dust_near]:
 			d.speed = _terrain.speed * 1.7
 			d.tint = _terrain.stage_tint().lightened(0.45)
-		AU.play_music("level%d" % (stage + 1))
-		_director.difficulty = meta.difficulty
-		_hud.set_stage(stage, LevelDefs.count(), String(meta.name))
+		AU.play_music("level%d" % (idx + 1))
+		_director.difficulty = _loop_difficulty(meta.difficulty)
+		_hud.set_stage(idx, LevelDefs.count(), String(meta.name), loop)
 
 		if GS.boss_rush:
-			await _director.boss(BossDefs.get_boss(stage))
+			await _director.boss(BossDefs.get_boss(idx))
 		else:
-			var script: RefCounted = LevelDefs.script_for(stage)
+			var script: RefCounted = LevelDefs.script_for(idx)
 			await script.run(_director)
 		if over:
 			return
 
 		await _stage_clear()
 		stage += 1
+
+		if stage % LevelDefs.count() == 0:
+			if not endless:
+				break
+			loop += 1
+			_hud.banner("LOOP %d" % (loop + 1), "THE PRESSURE RISES", 3.0)
+			await get_tree().create_timer(3.2, false).timeout
 
 	if not over:
 		_all_clear()
@@ -304,6 +331,8 @@ func _all_clear() -> void:
 func _game_over() -> void:
 	if over:
 		return
+	if GS.mode == GS.Mode.ENDLESS and await _offer_continue():
+		return
 	over = true
 	_director.stop()
 	AU.stop_music(1.2)
@@ -313,6 +342,44 @@ func _game_over() -> void:
 	_finish()
 
 
+## Arcade-style continue: the run keeps its progress but the score goes back to
+## zero, so continues buy depth rather than points.
+func _offer_continue() -> bool:
+	_ebm.clear_all(false)
+	AU.set_drone(false)
+	get_tree().paused = true
+
+	var left := 10.0
+	var taken := false
+	while left > 0.0:
+		_hud.set_message("CONTINUE?",
+			"%d      PRESS START" % maxi(ceili(left), 0))
+		if Input.is_action_just_pressed("p_start"):
+			taken = true
+			break
+		if Input.is_action_just_pressed("p_back"):
+			break
+		await get_tree().process_frame
+		left -= get_process_delta_time()
+
+	get_tree().paused = false
+	_hud.set_message("")
+	if not taken:
+		return false
+
+	best_score = maxi(best_score, score)
+	score = 0
+	chain = 0
+	chain_time = 0.0
+	lives_left = 2
+	_next_extend = 0
+	_absorbed = 0
+	_player.revive()
+	AU.play("menu_select")
+	_hud.banner("CONTINUE", "SCORE RESET", 2.4)
+	return true
+
+
 func _finish() -> void:
 	_dilate_token += 1
 	Engine.time_scale = 1.0
@@ -320,10 +387,11 @@ func _finish() -> void:
 	while not Input.is_action_just_pressed("p_start") \
 			and not Input.is_action_just_pressed("p_back"):
 		await get_tree().process_frame
-	GS.last_run_score = score
-	GS.last_run_stage = stage
+	GS.last_run_score = maxi(best_score, score)
+	GS.last_run_stage = stage % LevelDefs.count()
 	GS.last_run_cleared = cleared
 	GS.last_run_ship = _player.ship_index
+	GS.last_run_loop = loop
 	finished.emit(cleared)
 
 
@@ -509,6 +577,7 @@ func _touch_chain() -> void:
 
 func _add_score(n: int) -> void:
 	score += n
+	best_score = maxi(best_score, score)
 	while _next_extend < Cfg.EXTEND_SCORES.size() \
 			and score >= Cfg.EXTEND_SCORES[_next_extend]:
 		_next_extend += 1
@@ -645,10 +714,11 @@ func quit_to_title() -> void:
 	AU.set_drone(false)
 	over = true
 	_director.stop()
-	GS.last_run_score = score
-	GS.last_run_stage = stage
+	GS.last_run_score = maxi(best_score, score)
+	GS.last_run_stage = stage % LevelDefs.count()
 	GS.last_run_cleared = false
 	GS.last_run_ship = _player.ship_index
+	GS.last_run_loop = loop
 	finished.emit(false)
 
 

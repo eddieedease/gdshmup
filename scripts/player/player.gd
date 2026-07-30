@@ -499,6 +499,25 @@ func hit() -> void:
 	life_lost.emit()
 
 
+## Full reset for an Endless continue: back to a fresh ship at base power.
+func revive() -> void:
+	state = State.ALIVE
+	_sprite.visible = true
+	visible = true
+	set_process(true)
+	position = Vector2(Cfg.FIELD_W * 0.5, Cfg.FIELD_H - 170.0)
+	invuln = INVULN_TIME
+	bombs = 3
+	power = 1
+	power_chips = 0
+	hyper_time = 0.0
+	hyper_charge = 0.0
+	_refresh_beams()
+	for o in _options:
+		o.position = position
+	fx.shockwave(position, 260.0, colour, 0.6, 9.0)
+
+
 func _begin_respawn() -> void:
 	state = State.RESPAWNING
 	_sprite.visible = true

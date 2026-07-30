@@ -34,6 +34,21 @@ Destroying enemies without a gap builds a **chain**; the multiplier climbs to
 x6 and resets ~1.35s after you stop landing damage. Grazing bullets, collecting
 stars and bombing bullets off the screen all add score. Extends at 2M / 5M / 10M.
 
+## Modes
+
+**Arcade** — the authored five-stage run on one credit. No continues. This is
+the mode the pacing and difficulty curve were tuned for.
+
+**Endless** — the same stages, looping forever and getting harder each lap
+(x1.35 enemy health per loop, plus fire rate and speed). You may continue as
+often as you like, but every continue resets your score to zero and drops you
+back to base power, so continues buy *depth*, not points. The leaderboard
+records the best score reached on any single credit, plus the loop and stage
+you got to.
+
+Each mode keeps its own ranking table — they are not comparable achievements.
+Press A/D on the high-score screen to switch boards.
+
 ## Stages
 
 Five stages: three over terrain, then two in vacuum. The space themes are

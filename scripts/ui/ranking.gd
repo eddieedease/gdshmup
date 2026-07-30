@@ -12,6 +12,9 @@ var highlight := -1
 var auto_advance := true
 
 var _table: Table
+var _mode_label: Label
+## Which board is on screen; starts on the mode just played.
+var _view_mode := 0
 var _anim := 0.0
 var _ready_input := 0.35
 var _countdown := AUTO_ADVANCE
@@ -19,19 +22,36 @@ var _countdown := AUTO_ADVANCE
 
 func _ready() -> void:
 	build(0)
-	label("HIGH SCORES", 120.0, 56, Cfg.UI_ACCENT)
+	_view_mode = GS.mode
+	label("HIGH SCORES", 110.0, 52, Cfg.UI_ACCENT)
+	_mode_label = label("", 176.0, 26, Cfg.UI_GOLD)
 
 	_table = Table.new()
-	_table.rows = GS.scores
+	_table.rows = GS.table(_view_mode)
 	_table.highlight = highlight
-	_table.position = Vector2(40.0, 240.0)
+	_table.position = Vector2(40.0, 250.0)
 	_table.size = Vector2(Cfg.FIELD_W - 80.0, 620.0)
 	content.add_child(_table)
+	_refresh_board()
 
 	label("PRESS START", Cfg.FIELD_H - 190.0, 28, Cfg.UI_TEXT).name = "Prompt"
+	label("A / D  SWITCH BOARD", Cfg.FIELD_H - 106.0, 18, Cfg.UI_DIM)
 	if highlight >= 0:
 		label("YOUR RUN IS RANKED %d" % (highlight + 1),
 			Cfg.FIELD_H - 140.0, 20, Cfg.UI_GOLD)
+
+
+## Repoints the table at a board. The "your run" highlight only applies to the
+## board you actually played on.
+func _refresh_board() -> void:
+	_table.rows = GS.table(_view_mode)
+	_table.highlight = highlight if _view_mode == GS.mode else -1
+	_table.show_loop = _view_mode == GS.Mode.ENDLESS
+	_mode_label.text = "%s BOARD" % GS.mode_name(_view_mode)
+	_mode_label.add_theme_color_override("font_color",
+		Cfg.UI_ACCENT if _view_mode == GS.Mode.ARCADE
+		else Color(1.0, 0.55, 0.85))
+	_table.queue_redraw()
 
 
 func _process(dt: float) -> void:
@@ -52,6 +72,11 @@ func _process(dt: float) -> void:
 		if _countdown <= 0.0:
 			done.emit()
 			return
+	if Input.is_action_just_pressed("p_left") \
+			or Input.is_action_just_pressed("p_right"):
+		_view_mode = posmod(_view_mode + 1, GS.MODE_KEYS.size())
+		AU.play("menu_move")
+		_refresh_board()
 	if Input.is_action_just_pressed("p_start") \
 			or Input.is_action_just_pressed("p_back"):
 		AU.play("menu_select")
@@ -62,6 +87,7 @@ class Table:
 	extends Control
 	var rows: Array = []
 	var highlight := -1
+	var show_loop := false
 	var blink := 0.0
 
 	func _init() -> void:
@@ -110,8 +136,14 @@ class Table:
 			draw_string(f, Vector2(530 - sw, base), score_text,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 30, col)
 
-			var reached := "ALL CLEAR" if bool(e.get("cleared", false)) \
-				else "STAGE %d" % (int(e.get("stage", 0)) + 1)
+			var reached: String
+			if show_loop:
+				reached = "L%d  STAGE %d" % [int(e.get("loop", 0)) + 1,
+					int(e.get("stage", 0)) + 1]
+			elif bool(e.get("cleared", false)):
+				reached = "ALL CLEAR"
+			else:
+				reached = "STAGE %d" % (int(e.get("stage", 0)) + 1)
 			draw_string(f, Vector2(560, base), reached,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Cfg.UI_DIM if not is_new else col)
 

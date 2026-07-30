@@ -19,6 +19,8 @@ func _ready() -> void:
 			_show_game()
 		"select":
 			_show_select()
+		"mode":
+			_show_mode()
 		"ranking":
 			_show_ranking(2, false)
 		"name":
@@ -31,7 +33,8 @@ func _ready() -> void:
 
 
 ## Dev switches, passed after `--`:
-##   --screen=title|select|game|ranking|name   start on a given screen
+##   --screen=title|mode|select|game|ranking|name   start on a given screen
+##   --endless                    play the endless mode
 ##   --stage=N                    begin at stage N (1-3)
 ##   --ship=N                     preselect ship N (1-3)
 ##   --boss                       boss rush: skip the waves in every stage
@@ -48,6 +51,8 @@ func _apply_cli() -> void:
 				ShipDefs.count() - 1)
 		elif arg == "--boss":
 			GS.boss_rush = true
+		elif arg == "--endless":
+			GS.mode = GS.Mode.ENDLESS
 		elif arg == "--demo":
 			_demo = true
 		elif arg.begins_with("--pause-at="):
@@ -71,16 +76,23 @@ func _show_title() -> void:
 	get_tree().paused = false
 	AU.play_music("title")
 	var t := TitleScreen.new()
-	t.start_pressed.connect(_show_select)
+	t.start_pressed.connect(_show_mode)
 	t.ranking_pressed.connect(func(): _show_ranking(-1, false))
 	t.quit_pressed.connect(func(): get_tree().quit())
 	_swap(t)
 
 
+func _show_mode() -> void:
+	var m := ModeSelect.new()
+	m.confirmed.connect(func(_i): _show_select())
+	m.cancelled.connect(_show_title)
+	_swap(m)
+
+
 func _show_select() -> void:
 	var s := ShipSelect.new()
 	s.confirmed.connect(func(_i): _show_game())
-	s.cancelled.connect(_show_title)
+	s.cancelled.connect(_show_mode)
 	_swap(s)
 
 
