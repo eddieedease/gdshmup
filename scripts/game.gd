@@ -40,6 +40,7 @@ var _field: Node2D
 var _terrain: Terrain
 var _dust: SpeedDust
 var _dust_near: SpeedDust
+var _tunnel: Tunnel
 var _fx: FxLayer
 var _ebm: BulletManager
 var _pbm: BulletManager
@@ -85,6 +86,9 @@ func _build() -> void:
 	_dust_near = SpeedDust.new()
 	_dust_near.foreground = true
 	_field.add_child(_dust_near)
+
+	_tunnel = Tunnel.new()
+	_field.add_child(_tunnel)
 
 	_fx = FxLayer.new()
 	_field.add_child(_fx)
@@ -227,6 +231,7 @@ func _start_run() -> void:
 func shutdown() -> void:
 	_dilate_token += 1
 	Engine.time_scale = 1.0
+	_tunnel.intensity = 0.0
 	_shutting_down = true
 	over = true
 	_director.stop()
@@ -254,18 +259,25 @@ func _loop_difficulty(base: Dictionary) -> Dictionary:
 	}
 
 
+## Everything that changes when a stage begins. Called once up front, then
+## again from inside the transition flash so the swap is never seen.
+func _apply_stage(idx: int) -> void:
+	var meta := LevelDefs.meta(idx)
+	_terrain.set_stage(int(meta.terrain), 1000 + stage * 977)
+	for d in [_dust, _dust_near]:
+		d.speed = _terrain.speed * 1.7
+		d.tint = _terrain.stage_tint().lightened(0.45)
+	_tunnel.tint = _terrain.stage_tint().lightened(0.35)
+	AU.play_music("level%d" % (idx + 1))
+	_director.difficulty = _loop_difficulty(meta.difficulty)
+	_hud.set_stage(idx, LevelDefs.count(), String(meta.name), loop)
+
+
 func _run_stages() -> void:
 	var endless: bool = GS.mode == GS.Mode.ENDLESS
+	_apply_stage(stage % LevelDefs.count())
 	while not over:
 		var idx := stage % LevelDefs.count()
-		var meta := LevelDefs.meta(idx)
-		_terrain.set_stage(int(meta.terrain), 1000 + stage * 977)
-		for d in [_dust, _dust_near]:
-			d.speed = _terrain.speed * 1.7
-			d.tint = _terrain.stage_tint().lightened(0.45)
-		AU.play_music("level%d" % (idx + 1))
-		_director.difficulty = _loop_difficulty(meta.difficulty)
-		_hud.set_stage(idx, LevelDefs.count(), String(meta.name), loop)
 
 		if GS.boss_rush:
 			await _director.boss(BossDefs.get_boss(idx))
@@ -278,42 +290,70 @@ func _run_stages() -> void:
 		await _stage_clear()
 		stage += 1
 
-		if stage % LevelDefs.count() == 0:
-			if not endless:
-				break
+		var wrapped := stage % LevelDefs.count() == 0
+		if wrapped and not endless:
+			break
+		if wrapped:
 			loop += 1
-			_hud.banner("LOOP %d" % (loop + 1), "THE PRESSURE RISES", 3.0)
-			await get_tree().create_timer(3.2, false).timeout
+		if over:
+			return
+		await _transition(stage % LevelDefs.count(), wrapped)
 
 	if not over:
 		_all_clear()
+
+
+## Flies through a tunnel into the next stage: accelerate, punch through on a
+## flash (which is where the stage actually swaps), then decelerate out.
+func _transition(idx: int, wrapped: bool) -> void:
+	const IN := 1.3
+	const OUT := 1.6
+
+	var t := 0.0
+	while t < IN and not over:
+		var k: float = t / IN
+		var e: float = k * k
+		_tunnel.intensity = e
+		_dust.warp = 1.0 + 8.0 * e
+		_dust_near.warp = 1.0 + 8.0 * e
+		_terrain.warp = 1.0 + 3.5 * e
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	if over:
+		return
+
+	# Punch-through: the swap happens under a full-screen flash.
+	_hud.flash(0.85)
+	_shake = maxf(_shake, 10.0)
+	AU.play("boss_phase", 0.1)
+	_apply_stage(idx)
+	if wrapped:
+		_hud.banner("LOOP %d" % (loop + 1), "THE PRESSURE RISES", 2.6)
+
+	t = 0.0
+	while t < OUT and not over:
+		var k: float = 1.0 - (t / OUT)
+		var e: float = k * k
+		_tunnel.intensity = e
+		_dust.warp = 1.0 + 8.0 * e
+		_dust_near.warp = 1.0 + 8.0 * e
+		_terrain.warp = 1.0 + 3.5 * e
+		await get_tree().process_frame
+		t += get_process_delta_time()
+
+	_tunnel.intensity = 0.0
+	_dust.warp = 1.0
+	_dust_near.warp = 1.0
+	_terrain.warp = 1.0
 
 
 func _stage_clear() -> void:
 	_ebm.clear_all(false)
 	var bonus := 50_000 * (stage + 1) + lives_left * 100_000 + _player.bombs * 40_000
 	_add_score(bonus)
-	_hud.banner("STAGE CLEAR", "BONUS  %s" % Cfg.fmt_score(bonus), 3.4)
+	_hud.banner("STAGE CLEAR", "BONUS  %s" % Cfg.fmt_score(bonus), 2.8)
 	AU.play("stage_clear")
-	_warp(4.0)
-	await get_tree().create_timer(4.0, false).timeout
-
-
-## Stretches the starfield into long streaks and decays it back, so the gap
-## between stages reads as travelling rather than waiting.
-func _warp(duration: float) -> void:
-	var t := 0.0
-	while t < duration:
-		var k: float = 1.0 - (t / duration)
-		var boost := 1.0 + 6.0 * k * k
-		_dust.warp = boost
-		_dust_near.warp = boost
-		_terrain.warp = 1.0 + 2.2 * k * k
-		await get_tree().process_frame
-		t += get_process_delta_time()
-	_dust.warp = 1.0
-	_dust_near.warp = 1.0
-	_terrain.warp = 1.0
+	await get_tree().create_timer(3.0, false).timeout
 
 
 func _all_clear() -> void:

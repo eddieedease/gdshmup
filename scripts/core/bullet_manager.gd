@@ -194,6 +194,14 @@ func _process(dt: float) -> void:
 		_update_player_team(dt)
 
 
+## These loops emit signals, and a handler can reach straight back into this
+## manager and mutate `_live` - a player_hit that ends the run clears every
+## bullet, a scatter split spawns more. Re-clamping the cursor each iteration
+## keeps the walk valid however the array was rewritten underneath it.
+func _clamp_cursor(i: int) -> int:
+	return mini(i, _live.size() - 1)
+
+
 func _update_enemy_team(dt: float) -> void:
 	var can_hit: bool = is_instance_valid(player) and player.is_vulnerable()
 	var hit_r: float = Cfg.PLAYER_HITBOX
@@ -202,6 +210,9 @@ func _update_enemy_team(dt: float) -> void:
 
 	var i := _live.size() - 1
 	while i >= 0:
+		i = _clamp_cursor(i)
+		if i < 0:
+			break
 		var b: Bullet = _live[i]
 		var keep := b.step(dt, ppos)
 		if keep and b.split_after > 0.0 and b.age >= b.split_after:
@@ -229,6 +240,9 @@ func _update_enemy_team(dt: float) -> void:
 func _update_player_team(dt: float) -> void:
 	var i := _live.size() - 1
 	while i >= 0:
+		i = _clamp_cursor(i)
+		if i < 0:
+			break
 		var b: Bullet = _live[i]
 		var keep := b.step(dt, _nearest_enemy(b.position))
 		if keep:
@@ -293,6 +307,9 @@ func clear_radius(centre: Vector2, radius: float, convert: bool = true) -> void:
 	var r2 := radius * radius
 	var i := _live.size() - 1
 	while i >= 0:
+		i = _clamp_cursor(i)
+		if i < 0:
+			break
 		var b: Bullet = _live[i]
 		if b.position.distance_squared_to(centre) < r2:
 			if convert and not b.scored:

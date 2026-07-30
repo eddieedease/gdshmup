@@ -9,10 +9,13 @@ extends Node
 var pause_after := -1.0
 ## When >= 0, fills the hyper meter once at this many seconds in.
 var hyper_after := -1.0
+## When >= 0, fires a stage transition once, for inspecting the tunnel.
+var tunnel_after := -1.0
 
 var _t := 0.0
 var _paused_once := false
 var _hypered_once := false
+var _tunnelled_once := false
 
 
 func _ready() -> void:
@@ -32,6 +35,10 @@ func _process(dt: float) -> void:
 	if hyper_after >= 0.0 and not _hypered_once and _t >= hyper_after and host:
 		_hypered_once = true
 		host._player.add_charge(1.0)
+
+	if tunnel_after >= 0.0 and not _tunnelled_once and _t >= tunnel_after and host:
+		_tunnelled_once = true
+		host._transition((host.stage + 1) % LevelDefs.count(), false)
 
 	# Alternate weapons every few seconds so both are exercised.
 	var laser := fmod(_t, 6.0) > 3.0

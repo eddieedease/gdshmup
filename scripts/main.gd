@@ -9,6 +9,7 @@ var _screen := "title"
 var _demo := false
 var _pause_at := -1.0
 var _hyper_at := -1.0
+var _tunnel_at := -1.0
 
 
 func _ready() -> void:
@@ -59,6 +60,8 @@ func _apply_cli() -> void:
 			_pause_at = float(arg.split("=", true, 1)[1])
 		elif arg.begins_with("--hyper-at="):
 			_hyper_at = float(arg.split("=", true, 1)[1])
+		elif arg.begins_with("--tunnel-at="):
+			_tunnel_at = float(arg.split("=", true, 1)[1])
 
 
 func _swap(node: Node) -> void:
@@ -104,6 +107,7 @@ func _show_game() -> void:
 		var d := DemoDriver.new()
 		d.pause_after = _pause_at
 		d.hyper_after = _hyper_at
+		d.tunnel_after = _tunnel_at
 		g.add_child(d)
 
 

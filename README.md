@@ -121,4 +121,7 @@ Pass after `--`:
 --ship=N                     preselect ship N (1-3)
 --boss                       boss rush: skip the waves
 --demo                       drive the ship automatically
+--hyper-at=SEC               fill the hyper meter once, to inspect the state
+--tunnel-at=SEC              fire a stage transition, to inspect the tunnel
+--pause-at=SEC               open the pause menu
 ```
