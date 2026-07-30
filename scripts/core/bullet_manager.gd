@@ -63,40 +63,42 @@ func spawn(pos: Vector2, heading: float, speed: float, style: String,
 	return b
 
 
+## Bullet art sizes. Visuals were bumped ~25% for legibility while hitboxes
+## grew only ~12%, so bullets read bigger without dodging getting stricter.
 func _style(b: Bullet, style: String, mul: float) -> void:
 	match style:
 		"tiny":
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
-			b.scale = Vector2.ONE * 0.085 * mul
-			b.radius = 6.0 * mul
+			b.scale = Vector2.ONE * 0.108 * mul
+			b.radius = 6.8 * mul
 		"small":
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
-			b.scale = Vector2.ONE * 0.125 * mul
-			b.radius = 8.5 * mul
+			b.scale = Vector2.ONE * 0.158 * mul
+			b.radius = 9.6 * mul
 		"orb":
 			b.frames = Art.apply_sheet(b, "plasma", true)
-			b.scale = Vector2.ONE * 0.17 * mul
-			b.radius = 12.0 * mul
+			b.scale = Vector2.ONE * 0.215 * mul
+			b.radius = 13.4 * mul
 		"bigorb":
 			b.frames = Art.apply_sheet(b, "plasma", true)
 			b.scale = Vector2.ONE * 0.30 * mul
 			b.radius = 21.0 * mul
 		"needle":
 			b.frames = Art.apply_sheet(b, "laser", true)
-			b.scale = Vector2(0.09, 0.20) * mul
-			b.radius = 7.0 * mul
+			b.scale = Vector2(0.115, 0.26) * mul
+			b.radius = 7.9 * mul
 		"wave":
 			b.frames = Art.apply_sheet(b, "wavebeam", true)
-			b.scale = Vector2.ONE * 0.16 * mul
-			b.radius = 10.0 * mul
+			b.scale = Vector2.ONE * 0.2 * mul
+			b.radius = 11.2 * mul
 		"missile":
 			b.frames = Art.apply_sheet(b, "missile", true)
-			b.scale = Vector2.ONE * 0.17 * mul
-			b.radius = 10.0 * mul
+			b.scale = Vector2.ONE * 0.21 * mul
+			b.radius = 11.2 * mul
 		"bolt":
 			b.frames = Art.apply_sheet(b, "bolt", true)
-			b.scale = Vector2.ONE * 0.16 * mul
-			b.radius = 9.0 * mul
+			b.scale = Vector2.ONE * 0.2 * mul
+			b.radius = 10.1 * mul
 		"pshot":
 			b.frames = Art.apply_sheet(b, "bolt", true)
 			b.scale = Vector2(0.19, 0.28) * mul
@@ -111,8 +113,8 @@ func _style(b: Bullet, style: String, mul: float) -> void:
 			b.radius = 18.0 * mul
 		_:
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
-			b.scale = Vector2.ONE * 0.125 * mul
-			b.radius = 8.5 * mul
+			b.scale = Vector2.ONE * 0.158 * mul
+			b.radius = 9.6 * mul
 	b.anim_fps = 14.0
 
 

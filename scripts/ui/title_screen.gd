@@ -18,8 +18,9 @@ var _ready_input := 0.25
 func _ready() -> void:
 	build(0)
 
-	label("G D S H M U P", 150.0, 72, Cfg.UI_ACCENT)
-	label("D A N M A K U   A R C A D E", 236.0, 24, Cfg.UI_TEXT)
+	label("STRESSRELIEVER", 138.0, 60, Cfg.UI_ACCENT)
+	label("D A N M A K U   A R C A D E", 212.0, 24, Cfg.UI_TEXT)
+	label("DEVELOPED BY EDEASE", 248.0, 20, Cfg.UI_GOLD)
 
 	var rule := Rule.new()
 	rule.position = Vector2(Cfg.FIELD_W * 0.22, 284.0)

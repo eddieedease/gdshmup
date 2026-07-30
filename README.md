@@ -1,6 +1,7 @@
-# GDSHMUP
+# StressReliever
 
 A DoDonPachi-style vertical danmaku shooter built in Godot 4.7.
+Developed by EDease.
 
 ## Controls
 
@@ -32,6 +33,17 @@ mask for anything that spills outside the column.
 Destroying enemies without a gap builds a **chain**; the multiplier climbs to
 x6 and resets ~1.35s after you stop landing damage. Grazing bullets, collecting
 stars and bombing bullets off the screen all add score. Extends at 2M / 5M / 10M.
+
+## Power and hyper
+
+Power runs to **12 levels across three bars**. Bar one is the old full-power
+ramp; bar two adds a wide secondary volley and a third option bit, bar three a
+swept-back pair and a fourth bit. Option bits share one damage budget, so the
+extra bits widen your coverage rather than multiplying raw damage.
+
+The **hyper** meter fills from kills, grazes and pickups, then fires itself when
+it tops out. While hyper is up you fire faster and enemy bullets near the hull
+are *absorbed for score* instead of killing you.
 
 ## Structure
 

@@ -37,10 +37,12 @@ const TYPES := {
 		"tex": 6, "hp": 36, "scale": 0.24, "radius": 21, "score": 320,
 		"face": "vel",
 		"move": {"type": "line", "dir": 70.0, "speed": 330.0},
+		# A pack of these used to put ~9 needles each into the air per cycle,
+		# which only left the screen edges survivable.
 		"attacks": [{
-			"pattern": "aimed", "n": 3, "spread": 26.0, "speed": 320.0,
-			"style": "needle", "color": "cyan", "start": 0.5,
-			"interval": 1.1, "burst": 3, "burst_gap": 0.09,
+			"pattern": "aimed", "n": 2, "spread": 18.0, "speed": 295.0,
+			"style": "needle", "color": "cyan", "start": 0.7,
+			"interval": 1.7, "burst": 2, "burst_gap": 0.13,
 		}],
 		"drop": "star",
 	},
@@ -129,7 +131,7 @@ const TYPES := {
 		"drop": "star",
 	},
 	"WARDEN": {
-		"tex": 7, "hp": 420, "scale": 0.46, "radius": 46, "score": 6000,
+		"tex": 7, "hp": 1800, "scale": 0.46, "radius": 46, "score": 6000,
 		"move": {
 			"type": "enter_hold_exit", "enter": 1.6, "hold": 12.0,
 			"exit_dir": 90.0, "exit_speed": 240.0, "bob": 22.0,

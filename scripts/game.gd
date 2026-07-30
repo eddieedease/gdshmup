@@ -92,6 +92,7 @@ func _build() -> void:
 	_player = Player.new()
 	_player.setup(GS.ship_index)
 	_player.bullets = _pbm
+	_player.enemy_bullets = _ebm
 	_player.fx = _fx
 	_player.enemies = enemies
 	_field.add_child(_player)
@@ -128,6 +129,10 @@ func _build() -> void:
 	_player.damage_dealt.connect(_on_damage_dealt)
 	_player.life_lost.connect(_on_life_lost)
 	_player.bomb_fired.connect(_on_bomb)
+	_player.hyper_started.connect(func():
+		_hud.flash(0.35)
+		_shake = maxf(_shake, 8.0)
+		_hud.banner("", "HYPER ENGAGED", 1.6))
 	_director.wants_banner.connect(func(t, s, d): _hud.banner(t, s, d))
 	_director.wants_warning.connect(func():
 		_hud.warning()
@@ -313,6 +318,7 @@ func _on_enemy_died(e: Enemy) -> void:
 	enemies.erase(e)
 	chain += 1
 	chain_time = Cfg.CHAIN_TIMEOUT
+	_player.add_charge(Cfg.HYPER_CHARGE_KILL)
 	var gained := int(round(e.score * _chain_multiplier()))
 	_add_score(gained)
 	if e.score >= 500:
@@ -357,11 +363,13 @@ func _on_player_hit(_b: Bullet) -> void:
 func _on_graze(_b: Bullet) -> void:
 	graze += 1
 	_add_score(GRAZE_SCORE)
+	_player.add_charge(Cfg.HYPER_CHARGE_GRAZE)
 	AU.play("graze", 0.1)
 
 
 func _on_bullet_cleared(pos: Vector2) -> void:
-	_add_score(CLEARED_BULLET_SCORE)
+	_add_score(Cfg.HYPER_ABSORB_SCORE if _player.is_hyper()
+		else CLEARED_BULLET_SCORE)
 	if randf() < STAR_DROP_CHANCE:
 		_spawn_item(Item.Kind.STAR, pos, Vector2(randf_range(-60, 60), -60))
 
@@ -429,6 +437,7 @@ func _process(dt: float) -> void:
 		_chain_multiplier())
 	_hud.set_status(_player.power, maxi(lives_left, 0), _player.bombs, graze,
 		_ebm.live_count())
+	_hud.set_hyper(_player.hyper_charge, _player.is_hyper())
 
 
 ## Ramming an enemy hull is fatal. The hull box is deliberately smaller than the
@@ -498,6 +507,7 @@ func _collect(it: Item) -> void:
 			_fx.popup(it.position, "1UP", Color(0.5, 1, 0.6), 26)
 		_:
 			AU.play("item", 0.12)
+			_player.add_charge(Cfg.HYPER_CHARGE_ITEM)
 			_add_score(int(it.value * _chain_multiplier()))
 
 

@@ -22,9 +22,9 @@ func run(d: Director) -> void:
 	await d.wait(2.4)
 
 	# 2. Lancer storm from both wings, two altitudes.
-	d.crossfire("LANCER", 4, 0.30, 380.0, 130.0)
+	d.crossfire("LANCER", 3, 0.46, 380.0, 130.0)
 	await d.wait(0.8)
-	await d.crossfire("LANCER", 4, 0.30, 380.0, 420.0)
+	await d.crossfire("LANCER", 3, 0.46, 380.0, 420.0)
 	await d.wait(2.8)
 
 	# 3. Turret grid: four emplacements, staggered rings.
@@ -64,6 +64,13 @@ func run(d: Director) -> void:
 	await d.wait_until_under(2, 16.0)
 	await d.wait(1.2)
 
+	# 4b. Stinger storm from alternating wings.
+	for i in 3:
+		await d.snake("STINGER", 5, 0.18, i % 2 == 0, {"hp": 55})
+		await d.wait(1.3)
+	await d.wait_until_under(2, 14.0)
+	await d.wait(1.2)
+
 	# 5. Triple carousel.
 	d.carousel("SCOUT", 8, 270.0, 1.25, {"hp": 30})
 	await d.wait(0.8)
@@ -89,6 +96,18 @@ func run(d: Director) -> void:
 	await d.wait_until_under(2, 16.0)
 	await d.wait(1.4)
 
+	# 6b. Warden vanguard: one heavy before the real pair.
+	d.one("WARDEN", Vector2(W * 0.5, Cfg.SPAWN_Y), {
+		"hp": 800,
+		"move": {"type": "enter_hold_exit", "enter": 1.5, "hold": 11.0,
+			"hold_at": Vector2(W * 0.5, 235.0), "exit_dir": 90.0,
+			"exit_speed": 250.0, "bob": 20.0},
+	})
+	await d.wait(2.2)
+	await d.row("POPCORN", 8, 0.11, 90.0, W - 90.0, {"hp": 16})
+	await d.wait_clear(22.0)
+	await d.wait(1.6)
+
 	# 7. Spinner braid - five spirals, alternating direction.
 	for i in 5:
 		d.one("SPINNER", Vector2(W * (0.14 + 0.18 * i), Cfg.SPAWN_Y), {
@@ -103,7 +122,7 @@ func run(d: Director) -> void:
 		})
 		await d.wait(0.3)
 	await d.wait(4.0)
-	await d.crossfire("LANCER", 5, 0.26, 400.0, 640.0)
+	await d.crossfire("LANCER", 4, 0.42, 400.0, 640.0)
 	await d.wait_until_under(2, 16.0)
 	await d.wait(1.6)
 
@@ -130,9 +149,20 @@ func run(d: Director) -> void:
 	await d.wait_clear(22.0)
 	await d.wait(1.8)
 
+	# 8b. Bomber and seeker gauntlet, curtains plus missiles at once.
+	for i in 2:
+		d.one("BOMBER", Vector2(W * (0.32 + 0.36 * i), Cfg.SPAWN_Y), {"hp": 140})
+		await d.wait(0.7)
+	await d.wait(1.4)
+	for i in 3:
+		d.one("SEEKER", Vector2(W * (0.22 + 0.28 * i), Cfg.SPAWN_Y), {"hp": 60})
+		await d.wait(0.35)
+	await d.wait_until_under(2, 18.0)
+	await d.wait(1.6)
+
 	# 9. Twin wardens with lock-on support.
 	d.one("WARDEN", Vector2(W * 0.28, Cfg.SPAWN_Y), {
-		"hp": 520,
+		"hp": 950,
 		"move": {"type": "enter_hold_exit", "enter": 1.6, "hold": 16.0,
 			"hold_at": Vector2(W * 0.28, 250.0), "exit_dir": 90.0,
 			"exit_speed": 240.0, "bob": 22.0},
@@ -145,7 +175,7 @@ func run(d: Director) -> void:
 		],
 	})
 	d.one("WARDEN", Vector2(W * 0.72, Cfg.SPAWN_Y), {
-		"hp": 520,
+		"hp": 950,
 		"move": {"type": "enter_hold_exit", "enter": 2.0, "hold": 16.0,
 			"hold_at": Vector2(W * 0.72, 250.0), "exit_dir": 90.0,
 			"exit_speed": 240.0, "bob": 22.0},
@@ -160,7 +190,7 @@ func run(d: Director) -> void:
 	})
 	await d.wait(4.0)
 	await d.row("HUNTER", 4, 0.18, 150.0, W - 150.0)
-	await d.wait_clear(28.0)
+	await d.wait_clear(34.0)
 	await d.wait(2.4)
 
 	await d.boss(BossDefs.get_boss(2))

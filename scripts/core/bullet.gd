@@ -13,6 +13,12 @@ const ART_OFFSET := PI * 0.5
 
 ## Every bullet breathes: scale and brightness oscillate so projectiles read as
 ## live energy and stay visible against the scrolling ground.
+## Curving patterns can orbit inside the playfield indefinitely, so bullets
+## time out rather than relying on leaving the screen. The last stretch fades
+## so they dissolve instead of blinking out.
+const DEFAULT_LIFE := 10.0
+const FADE_OUT := 0.7
+
 const PULSE_RATE := 9.5
 const PULSE_SCALE := 0.13
 const PULSE_BRIGHT := 0.26
@@ -41,7 +47,7 @@ var wave_freq := 0.0
 var wave_phase := 0.0
 
 var radius := 7.0
-var life := 24.0
+var life := DEFAULT_LIFE
 var age := 0.0
 
 ## Player bullets only.
@@ -76,7 +82,7 @@ func reset() -> void:
 	wave_freq = 0.0
 	wave_phase = 0.0
 	radius = 7.0
-	life = 24.0
+	life = DEFAULT_LIFE
 	age = 0.0
 	damage = 0
 	pierce = 0
@@ -125,7 +131,9 @@ func step(dt: float, target: Vector2) -> bool:
 		if face_dir:
 			rotation = dir + ART_OFFSET
 		return true
-	_apply_pulse(1.0)
+
+	var left := life - age
+	_apply_pulse(1.0 if left > FADE_OUT else maxf(left / FADE_OUT, 0.0))
 
 	if homing_time > 0.0 and homing > 0.0:
 		homing_time -= dt

@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="GDSHMUP"
+config/name="StressReliever"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
@@ -27,7 +27,6 @@ window/size/viewport_height=1080
 window/size/mode=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-window/vsync/vsync_mode=1
 
 [physics]
 
@@ -35,6 +34,6 @@ window/vsync/vsync_mode=1
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
 textures/canvas_textures/default_texture_filter=0
+rendering_device/driver.windows="d3d12"
 environment/defaults/default_clear_color=Color(0.03, 0.03, 0.05, 1)

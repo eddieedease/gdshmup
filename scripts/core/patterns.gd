@@ -94,7 +94,7 @@ static func _mk(bm: BulletManager, s: Dictionary, origin: Vector2, ang: float,
 	b.delay = float(s.get("delay", 0.0))
 	b.wave_amp = float(s.get("wave", 0.0))
 	b.wave_freq = float(s.get("wave_freq", 6.0))
-	b.life = float(s.get("life", 24.0))
+	b.life = float(s.get("life", Bullet.DEFAULT_LIFE))
 	var hom := float(s.get("homing", 0.0))
 	if hom > 0.0:
 		b.homing = hom * DEG

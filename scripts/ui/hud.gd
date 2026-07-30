@@ -34,6 +34,8 @@ var _ship_icon: Sprite2D
 var _power_bar: Segments
 var _lives: IconRow
 var _bombs: IconRow
+var _hyper_bar: Bar
+var _l_hyper: Label
 var _l_graze: Label
 var _l_bullets: Label
 
@@ -95,7 +97,8 @@ func _label(parent: Control, text: String, size: int, col: Color,
 
 
 func _build_left() -> void:
-	_label(_left, "GDSHMUP", 30, Cfg.UI_ACCENT).name = "Logo"
+	_label(_left, "STRESS", 30, Cfg.UI_ACCENT).name = "Logo"
+	_label(_left, "RELIEVER", 30, Cfg.UI_ACCENT).name = "Logo2"
 	_label(_left, "HI-SCORE", 15, Cfg.UI_DIM).name = "HiCap"
 	_l_hi = _label(_left, "0", 28, Cfg.UI_GOLD)
 	_label(_left, "SCORE", 15, Cfg.UI_DIM).name = "ScoreCap"
@@ -140,6 +143,12 @@ func _build_right() -> void:
 	_bombs.shape_circle = true
 	_right.add_child(_bombs)
 
+	_label(_right, "HYPER", 15, Cfg.UI_DIM).name = "HyperCap"
+	_hyper_bar = Bar.new()
+	_hyper_bar.col = Color(1.0, 0.45, 0.85)
+	_right.add_child(_hyper_bar)
+	_l_hyper = _label(_right, "", 20, Color(1.0, 0.45, 0.85))
+
 	_label(_right, "GRAZE", 15, Cfg.UI_DIM).name = "GrazeCap"
 	_l_graze = _label(_right, "0", 26, Cfg.UI_GOLD)
 	_l_bullets = _label(_right, "", 13, Cfg.UI_DIM)
@@ -165,7 +174,7 @@ func _layout() -> void:
 
 	var w := field_x - PAD * 2.0
 	_stack(_left, w, [
-		["Logo", 42.0], ["HiCap", 26.0], [_l_hi, 40.0],
+		["Logo", 34.0], ["Logo2", 42.0], ["HiCap", 26.0], [_l_hi, 40.0],
 		["ScoreCap", 26.0], [_l_score, 58.0],
 		["ChainCap", 26.0], [_l_chain, 54.0], [_l_chain_sub, 24.0],
 		[_chain_bar, 22.0],
@@ -184,8 +193,9 @@ func _layout() -> void:
 		["PowCap", 26.0], [_power_bar, 40.0],
 		["LifeCap", 26.0], [_lives, 42.0],
 		["BombCap", 26.0], [_bombs, 42.0],
-		["GrazeCap", 26.0], [_l_graze, 40.0], [_l_bullets, 26.0],
-	], 330.0)
+		["HyperCap", 26.0], [_hyper_bar, 24.0], [_l_hyper, 30.0],
+		["GrazeCap", 26.0], [_l_graze, 38.0], [_l_bullets, 26.0],
+	], 320.0)
 
 
 ## Positions a vertical stack of children, each entry [node_or_name, height].
@@ -232,6 +242,23 @@ func set_ship(ship: Dictionary) -> void:
 	_l_ship_name.add_theme_color_override("font_color", ship.color)
 	Art.apply_ship(_ship_icon, Art.PLAYER_SHIPS[ship.tex])
 	_ship_icon.frame = 2
+
+
+## `hyper` is 0..1 charge; `hyper_active` swaps the meter to a countdown.
+func set_hyper(charge: float, hyper_active: bool) -> void:
+	_hyper_bar.value = charge
+	_hyper_bar.col = Color(1.0, 0.85, 0.35) if hyper_active \
+		else Color(1.0, 0.45, 0.85)
+	_hyper_bar.queue_redraw()
+	if hyper_active:
+		_l_hyper.text = "** HYPER **"
+		_l_hyper.modulate.a = 0.55 + 0.45 * absf(sin(_t * 12.0))
+	elif charge >= 1.0:
+		_l_hyper.text = "READY"
+		_l_hyper.modulate.a = 1.0
+	else:
+		_l_hyper.text = "%d%%" % int(charge * 100.0)
+		_l_hyper.modulate.a = 1.0
 
 
 func set_status(power: int, lives: int, bombs: int, graze: int,
@@ -348,6 +375,8 @@ class Bar:
 		draw_rect(Rect2(r.position, Vector2(r.size.x * clampf(value, 0, 1), h)), col)
 		draw_rect(r, Color(col.r, col.g, col.b, 0.35), false, 1.0)
 
+## Power meter: MAX_POWER segments split into POWER_BARS groups, so at a glance
+## you can see both which bar you are on and how far through it you are.
 class Segments:
 	extends Control
 	var value := 1
@@ -357,16 +386,25 @@ class Segments:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		var gap := 6.0
-		var w := (size.x - gap * (total - 1)) / total
+		var per := Cfg.POWER_PER_BAR
+		var bars := Cfg.POWER_BARS
+		var gap := 3.0
+		var bar_gap := 13.0
+		var w := (size.x - gap * (per - 1) * bars - bar_gap * (bars - 1)) \
+			/ float(total)
+		var x := 0.0
 		for i in total:
-			var r := Rect2(Vector2(i * (w + gap), 4), Vector2(w, 18))
+			var r := Rect2(Vector2(x, 4), Vector2(w, 18))
 			if i < value:
-				var t := float(i) / maxf(total - 1, 1)
-				draw_rect(r, Cfg.UI_ACCENT.lerp(Cfg.UI_GOLD, t))
+				# Each bar has its own colour so the tier is unmistakable.
+				var tier := i / per
+				var col: Color = [Cfg.UI_ACCENT, Cfg.UI_GOLD,
+					Color(1.0, 0.45, 0.75)][mini(tier, 2)]
+				draw_rect(r, col)
 			else:
 				draw_rect(r, Color(1, 1, 1, 0.09))
-			draw_rect(r, Color(1, 1, 1, 0.22), false, 1.0)
+			draw_rect(r, Color(1, 1, 1, 0.18), false, 1.0)
+			x += w + (bar_gap if (i + 1) % per == 0 else gap)
 
 class IconRow:
 	extends Control

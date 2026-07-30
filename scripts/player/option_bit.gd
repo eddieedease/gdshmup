@@ -11,6 +11,9 @@ var offset := Vector2.ZERO ## Current target offset from the ship.
 var fire_timer := 0.0
 
 var beam: Beam
+## Fraction of the main beam's dps this bit contributes; set by the ship so the
+## bits always share one budget between them.
+var beam_share := 0.45
 
 var _orb: Sprite2D
 var _t := 0.0

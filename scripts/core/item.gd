@@ -26,8 +26,8 @@ const SIZES := {
 	Kind.POWER: 15.0,
 	Kind.BOMB: 15.0,
 	Kind.EXTEND: 18.0,
-	Kind.STAR: 8.0,
-	Kind.BIG_STAR: 12.0,
+	Kind.STAR: 5.5,
+	Kind.BIG_STAR: 8.5,
 }
 
 var kind: int = Kind.POWER
@@ -85,11 +85,13 @@ func _draw() -> void:
 	var pulse := 1.0 + sin(age * 8.0) * 0.08
 	var r := _radius * pulse
 	if kind == Kind.STAR or kind == Kind.BIG_STAR:
+		# Kept small and softly lit: these appear in bulk on every kill, so a
+		# bright halo each read as an explosion of its own.
 		var glow := _col
-		glow.a = 0.35
-		draw_circle(Vector2.ZERO, r * 1.7, glow)
-		draw_circle(Vector2.ZERO, r, _col)
-		draw_circle(Vector2.ZERO, r * 0.45, Color(1, 1, 1, 0.9))
+		glow.a = 0.18
+		draw_circle(Vector2.ZERO, r * 1.5, glow)
+		draw_circle(Vector2.ZERO, r, Color(_col.r, _col.g, _col.b, 0.85))
+		draw_circle(Vector2.ZERO, r * 0.4, Color(1, 1, 1, 0.75))
 		return
 
 	var pts := PackedVector2Array([

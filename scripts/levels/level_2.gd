@@ -62,6 +62,15 @@ func run(d: Director) -> void:
 	await d.wait_until_under(2, 14.0)
 	await d.wait(1.4)
 
+	# 5b. Stinger pairs crossing over a slow bomber.
+	d.one("BOMBER", Vector2(W * 0.62, Cfg.SPAWN_Y))
+	await d.wait(0.8)
+	await d.snake("STINGER", 5, 0.22, true)
+	await d.wait(1.2)
+	await d.snake("STINGER", 5, 0.22, false)
+	await d.wait_until_under(2, 14.0)
+	await d.wait(1.4)
+
 	# 6. Counter-rotating carousels.
 	d.carousel("SCOUT", 7, 250.0, 1.15, {
 		"hp": 24,
@@ -88,9 +97,18 @@ func run(d: Director) -> void:
 		})
 		await d.wait(0.45)
 	await d.wait(3.0)
-	await d.crossfire("LANCER", 4, 0.35, 360.0, 620.0)
+	await d.crossfire("LANCER", 3, 0.50, 360.0, 620.0)
 	await d.wait_until_under(2, 14.0)
 	await d.wait(1.6)
+
+	# 7b. Weaver tide with scouts filling the gaps.
+	for i in 3:
+		d.row("WEAVER", 4, 0.22, 140.0, W - 140.0)
+		await d.wait(1.1)
+		await d.row("SCOUT", 4, 0.20, W - 180.0, 180.0)
+		await d.wait(1.6)
+	await d.wait_until_under(2, 14.0)
+	await d.wait(1.4)
 
 	# 8. Missile pressure.
 	d.one("SEEKER", Vector2(W * 0.2, Cfg.SPAWN_Y))
@@ -104,13 +122,13 @@ func run(d: Director) -> void:
 	# 9. Twin wardens.
 	d.banner("", "TWIN WARDEN ESCORT", 2.0)
 	d.one("WARDEN", Vector2(W * 0.3, Cfg.SPAWN_Y), {
-		"hp": 380,
+		"hp": 1100,
 		"move": {"type": "enter_hold_exit", "enter": 1.6, "hold": 14.0,
 			"hold_at": Vector2(W * 0.3, 240.0), "exit_dir": 90.0,
 			"exit_speed": 240.0, "bob": 20.0},
 	})
 	d.one("WARDEN", Vector2(W * 0.7, Cfg.SPAWN_Y), {
-		"hp": 380,
+		"hp": 1100,
 		"move": {"type": "enter_hold_exit", "enter": 1.9, "hold": 14.0,
 			"hold_at": Vector2(W * 0.7, 240.0), "exit_dir": 90.0,
 			"exit_speed": 240.0, "bob": 20.0},
@@ -124,8 +142,18 @@ func run(d: Director) -> void:
 	})
 	await d.wait(3.0)
 	await d.row("POPCORN", 6, 0.18, 120.0, W - 120.0)
-	await d.wait_clear(24.0)
+	await d.wait_clear(30.0)
 	await d.wait(2.0)
+
+	# 9b. Hunter waves either side of a turret pair.
+	d.one("TURRET", Vector2(W * 0.24, Cfg.SPAWN_Y), {"hp": 90})
+	d.one("TURRET", Vector2(W * 0.76, Cfg.SPAWN_Y), {"hp": 90})
+	await d.wait(1.6)
+	await d.row("HUNTER", 4, 0.16, 130.0, W - 130.0)
+	await d.wait(2.4)
+	await d.row("HUNTER", 4, 0.16, W - 130.0, 130.0)
+	await d.wait_until_under(2, 16.0)
+	await d.wait(1.6)
 
 	# 10. Guard gauntlet before the boss.
 	d.one("GUARD", Vector2(W * 0.5, Cfg.SPAWN_Y), {
@@ -134,7 +162,7 @@ func run(d: Director) -> void:
 			"exit_speed": 260.0},
 	})
 	await d.wait(1.2)
-	await d.crossfire("LANCER", 5, 0.28, 380.0, 160.0)
+	await d.crossfire("LANCER", 4, 0.44, 380.0, 160.0)
 	await d.wait_until_under(2, 14.0)
 	await d.wait(2.2)
 

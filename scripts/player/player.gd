@@ -10,6 +10,8 @@ extends Node2D
 
 signal life_lost
 signal bomb_fired
+signal hyper_started
+signal hyper_ended
 signal damage_dealt(enemy: Node2D, amount: float, at: Vector2)
 
 enum State { ALIVE, DYING, RESPAWNING }
@@ -20,7 +22,18 @@ const BOMB_TIME := 2.3
 const BOMB_INVULN := 0.6
 ## Damage per second applied to everything on screen while a bomb burns.
 const BOMB_DPS := 300.0
-const DEATH_POWER_LOSS := 1
+## With twelve power levels a single step back barely registers, so a death
+## costs a little more.
+const DEATH_POWER_LOSS := 2
+
+## Option bits share one damage budget: this is their combined contribution as a
+## fraction of the main beam, split between however many bits are active. A
+## third and fourth bit therefore widen coverage instead of multiplying damage.
+const OPT_BEAM_TOTAL := 0.90
+
+## Power at which the shot gains its wide secondary volley, and its rear pair.
+const WIDE_SHOT_POWER := 5
+const WING_SHOT_POWER := 9
 
 ## Above this line every item on screen is magnetised, rewarding aggression.
 const AUTO_COLLECT_Y := 260.0
@@ -39,8 +52,14 @@ var bomb_time := 0.0
 var laser_held := false
 var shot_held := false
 
-## Wired up by the game scene.
+## Hyper: charge accrues through play, fires itself at full, then drains.
+var hyper_charge := 0.0
+var hyper_time := 0.0
+
+## Wired up by the game scene. `bullets` is the player's own pool; the bomb and
+## hyper absorb need the enemy pool, which is a different manager entirely.
 var bullets: BulletManager
+var enemy_bullets: BulletManager
 var fx: FxLayer
 var enemies: Array = []
 var option_root: Node2D
@@ -50,6 +69,7 @@ var _beam: Beam
 var _shield: Sprite2D
 var _hitbox: Node2D
 var _trail: EngineTrail
+var _aura: Sprite2D
 var _options: Array[OptionBit] = []
 var _shot_cd := 0.0
 var _opt_cd := 0.0
@@ -88,6 +108,15 @@ func setup(index: int) -> void:
 	_hitbox.z_index = 3
 	add_child(_hitbox)
 
+	_aura = Sprite2D.new()
+	_aura.centered = true
+	Art.apply_sheet(_aura, "shield", true)
+	_aura.scale = Vector2.ONE * 0.85
+	_aura.modulate = Color(1.0, 0.55, 0.9, 0.55)
+	_aura.visible = false
+	_aura.z_index = -1
+	add_child(_aura)
+
 	_trail = EngineTrail.new()
 	_trail.colour = colour
 	_trail.z_index = -3
@@ -100,9 +129,11 @@ func setup(index: int) -> void:
 ## Bits must live outside the ship's transform so they can trail behind it.
 func spawn_options(root: Node2D) -> void:
 	option_root = root
-	for i in 2:
+	# Four bits exist from the start; opt_count decides how many are shown.
+	# Sides alternate so each new pair is symmetric.
+	for i in 4:
 		var o := OptionBit.new()
-		o.setup(colour, -1.0 if i == 0 else 1.0)
+		o.setup(colour, -1.0 if i % 2 == 0 else 1.0)
 		root.add_child(o)
 		o.position = position
 		_options.append(o)
@@ -112,12 +143,52 @@ func spawn_options(root: Node2D) -> void:
 func _refresh_beams() -> void:
 	var w: float = ShipDefs.at_power(ship, "laser_width", power)
 	_beam.configure(w, Color(colour.r, colour.g, colour.b, 0.92))
+	var count: int = ShipDefs.at_power(ship, "opt_count", power)
+	var share := OPT_BEAM_TOTAL / float(maxi(count, 1))
 	for o in _options:
-		o.beam.configure(w * 0.5, Color(colour.r, colour.g, colour.b, 0.7))
+		o.beam.configure(w * 0.45, Color(colour.r, colour.g, colour.b, 0.7))
+		o.beam_share = share
 
 
 func is_vulnerable() -> bool:
-	return state == State.ALIVE and invuln <= 0.0
+	# Hyper eats bullets rather than taking them, so it reads as immunity here.
+	return state == State.ALIVE and invuln <= 0.0 and hyper_time <= 0.0
+
+
+func is_hyper() -> bool:
+	return hyper_time > 0.0
+
+
+## Feeds the hyper meter. Auto-fires the moment it tops out.
+func add_charge(amount: float) -> void:
+	if hyper_time > 0.0 or state != State.ALIVE:
+		return
+	hyper_charge = clampf(hyper_charge + amount, 0.0, 1.0)
+	if hyper_charge >= 1.0:
+		_start_hyper()
+
+
+func _start_hyper() -> void:
+	hyper_time = Cfg.HYPER_TIME
+	hyper_charge = 1.0
+	fx.shockwave(position, 420.0, Color(1.0, 0.55, 0.9), 0.8, 14.0)
+	fx.popup(position + Vector2(0, -70), "HYPER", Color(1.0, 0.55, 0.9), 34)
+	AU.play("extend")
+	hyper_started.emit()
+
+
+func _update_hyper(dt: float) -> void:
+	if hyper_time <= 0.0:
+		return
+	hyper_time -= dt
+	hyper_charge = clampf(hyper_time / Cfg.HYPER_TIME, 0.0, 1.0)
+	# Absorb, rather than merely survive: bullets near the hull are eaten and
+	# scored, which is what makes hyper feel like a reward instead of a shield.
+	enemy_bullets.clear_radius(position, Cfg.HYPER_ABSORB_RADIUS, true)
+	if hyper_time <= 0.0:
+		hyper_time = 0.0
+		hyper_charge = 0.0
+		hyper_ended.emit()
 
 
 func is_focused() -> bool:
@@ -156,6 +227,7 @@ func _process(dt: float) -> void:
 			_respawn_move(dt)
 
 	_update_bomb(dt)
+	_update_hyper(dt)
 	_update_visuals(dt)
 
 
@@ -200,7 +272,7 @@ func _update_options(dt: float) -> void:
 		o.visible = i < count
 		if not o.visible:
 			continue
-		var lane := 0 if count == 1 else i
+		var lane: int = mini(i, spread.size() - 1) if count > 1 else 0
 		var dx: float = float(tight[lane]) if laser_held else float(spread[lane])
 		var dy := 26.0 if laser_held else 14.0
 		o.follow(position, Vector2(o.side * dx, dy), dt)
@@ -209,9 +281,14 @@ func _update_options(dt: float) -> void:
 func _fire_shot(dt: float) -> void:
 	_shot_cd -= dt
 	if _shot_cd <= 0.0:
-		_shot_cd += float(ship.shot_rate)
+		var rate := float(ship.shot_rate)
+		if is_hyper():
+			rate *= Cfg.HYPER_FIRE_BOOST
+		_shot_cd += rate
+
 		var n: int = ShipDefs.at_power(ship, "shot_n", power)
 		var dmg: int = ShipDefs.at_power(ship, "shot_damage", power)
+		var pierce: int = ShipDefs.at_power(ship, "shot_pierce", power)
 		var spread: float = float(ship.shot_spread) * PI / 180.0
 		var spd: float = ship.shot_speed
 		var nose := position + Vector2(0, -30)
@@ -221,7 +298,18 @@ func _fire_shot(dt: float) -> void:
 			var b := bullets.spawn(nose, a, spd, "pshot", colour)
 			if b:
 				b.damage = dmg
+				b.pierce = pierce
 				b.life = 2.5
+
+		# Bar two adds a wide secondary pair, bar three a swept-back pair, so
+		# each new bar visibly changes the shape of your fire.
+		if power >= WIDE_SHOT_POWER:
+			_extra_pair(nose, spread * 1.6, spd * 0.92, dmg, pierce, "pspread")
+		if power >= WING_SHOT_POWER:
+			_extra_pair(nose, spread * 2.8 + 0.5, spd * 0.85, dmg, pierce, "pspread")
+		if is_hyper():
+			_extra_pair(nose, 0.16, spd * 1.1, dmg, pierce + 1, "pshot")
+
 		fx.muzzle(nose, -PI * 0.5, colour, 0.14)
 		AU.play("shot", 0.07)
 
@@ -250,6 +338,18 @@ func _fire_shot(dt: float) -> void:
 					b.life = 2.5
 
 
+## Two mirrored shots at +/- `half_spread` from straight up.
+func _extra_pair(from: Vector2, half_spread: float, spd: float, dmg: int,
+		pierce: int, style: String) -> void:
+	for sign_ in [-1.0, 1.0]:
+		var b := bullets.spawn(from, -PI * 0.5 + sign_ * half_spread, spd,
+			style, colour.lightened(0.15))
+		if b:
+			b.damage = dmg
+			b.pierce = pierce
+			b.life = 2.5
+
+
 ## The laser is a persistent column: everything in the strip above the emitter
 ## takes damage every frame.
 func _fire_laser(dt: float) -> void:
@@ -268,7 +368,8 @@ func _fire_laser(dt: float) -> void:
 		if not on:
 			continue
 		o.beam.set_length(o.position.y + 80.0)
-		_damage_column(o.position.x, o.position.y, width * 0.5, dps * 0.45 * dt, dt)
+		_damage_column(o.position.x, o.position.y, width * 0.45,
+			dps * o.beam_share * dt, dt)
 
 	_beam_spark_cd -= dt
 
@@ -305,7 +406,7 @@ func _try_bomb() -> void:
 	invuln = maxf(invuln, BOMB_TIME + BOMB_INVULN)
 	# Wipe the screen the instant it goes off - a bomb is a panic button, so
 	# it has to pay out immediately rather than as an expanding front.
-	bullets.clear_all(true)
+	enemy_bullets.clear_all(true)
 	fx.shockwave(position, 520.0, colour, 0.7, 16.0)
 	fx.shockwave(position, 900.0, Color(1, 1, 1, 0.9), 1.0, 9.0)
 	fx.explode(position, 2.2, colour)
@@ -319,7 +420,7 @@ func _update_bomb(dt: float) -> void:
 	bomb_time -= dt
 	# Keep suppressing fire for the whole burn, so anything an enemy launches
 	# mid-bomb is swallowed too and the window is genuinely safe.
-	bullets.clear_all(true)
+	enemy_bullets.clear_all(true)
 	var i := enemies.size() - 1
 	while i >= 0:
 		var e = enemies[i]
@@ -380,6 +481,11 @@ func _update_visuals(_dt: float) -> void:
 	if _shield.visible:
 		_shield.frame = int(_t * 10.0) % 4
 		_shield.rotation = _t * 1.4
+	_aura.visible = is_hyper()
+	if _aura.visible:
+		_aura.frame = int(_t * 14.0) % 4
+		_aura.rotation = -_t * 2.6
+		_aura.scale = Vector2.ONE * (0.85 + 0.06 * sin(_t * 9.0))
 	_hitbox.visible = is_focused()
 	if _hitbox.visible:
 		_hitbox.queue_redraw()

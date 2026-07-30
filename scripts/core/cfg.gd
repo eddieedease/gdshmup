@@ -28,8 +28,24 @@ const PLAYER_HITBOX := 5.0
 ## Radius within which passing bullets award graze points.
 const GRAZE_RADIUS := 34.0
 
-const MAX_POWER := 4
+## Three bars of four. Reaching the top of bar one used to be the whole ramp;
+## bars two and three keep the run growing well past that point.
+const POWER_PER_BAR := 4
+const POWER_BARS := 3
+const MAX_POWER := POWER_PER_BAR * POWER_BARS
+
 const CHAIN_TIMEOUT := 1.35
+
+# --- Hyper ------------------------------------------------------------------
+## The meter fills through normal play and fires itself when it tops out.
+const HYPER_TIME := 9.0
+const HYPER_CHARGE_KILL := 0.010
+const HYPER_CHARGE_GRAZE := 0.0015
+const HYPER_CHARGE_ITEM := 0.003
+## Enemy bullets inside this radius are absorbed for score while hyper is up.
+const HYPER_ABSORB_RADIUS := 190.0
+const HYPER_FIRE_BOOST := 0.62   ## Cooldown multiplier: lower is faster.
+const HYPER_ABSORB_SCORE := 400
 
 const EXTEND_SCORES := [2_000_000, 5_000_000, 10_000_000]
 
