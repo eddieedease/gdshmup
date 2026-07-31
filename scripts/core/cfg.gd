@@ -71,6 +71,14 @@ const WEAPON_DROP_EVERY := 18
 ## the magenta hyper already owns.
 ## The mode's damage cut lives in the per-ship `track_*` arrays in ShipDefs.
 const TRACK_TINT := Color(0.55, 0.25, 1.0)
+## The lock ring never opens smaller than this radius - a full playfield width
+## across, before it has even started growing. The mode pays for its reach in
+## movement speed, so the reach has to be worth the trade: a ring you have to
+## fly into things to use is just a worse vulcan. What keeps this honest is
+## lock_max, not the ring - three missiles at power one however much field the
+## ring covers. Expressed against FIELD_W so it tracks the playfield.
+const LOCK_RADIUS_MIN := FIELD_W * 0.5
+
 ## Missiles that can pile onto a single *ordinary* enemy in one lock volley, so
 ## a salvo spreads across a wave instead of deleting one popcorn ship. Bosses
 ## are exempt: they are the target worth emptying the whole rack into.

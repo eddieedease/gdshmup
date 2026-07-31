@@ -31,8 +31,9 @@ const LOCK_INTERVAL := 0.055
 ## The ring opens at this fraction of its full radius and widens while K is held,
 ## so holding longer buys both more targets and more reach. Both the opening and
 ## the full size come from the ship's per-power lock_radius, so a powered-up
-## lock is visibly a wider net. Growth is in pixels per second.
-const LOCK_RADIUS_START_FRAC := 0.42
+## lock is visibly a wider net - but it never opens below Cfg.LOCK_RADIUS_MIN.
+## Growth is in pixels per second.
+const LOCK_RADIUS_START_FRAC := 0.55
 const LOCK_GROW := 430.0
 ## Dead time after a salvo before the ring can paint anything again. Without it,
 ## tapping K fires a one-missile salvo every tap - free damage, and a pile of
@@ -610,7 +611,7 @@ func _fire_locks() -> void:
 
 ## Shrinks the ring back to its opening size for the next hold.
 func _lock_reset() -> void:
-	_lock_r = lock_radius() * LOCK_RADIUS_START_FRAC
+	_lock_r = maxf(lock_radius() * LOCK_RADIUS_START_FRAC, Cfg.LOCK_RADIUS_MIN)
 
 
 func _clear_locks() -> void:

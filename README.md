@@ -40,9 +40,14 @@ mode: power makes the *beam itself* bigger rather than adding more guns.
 (slower on `K` alone), because a weapon that stops shooting while you set up a
 lock leaves the screen empty for a second or two. A ring opens and widens
 while you hold it, bracketing everything it touches; releasing sends one very
-fast homing missile at each painted target. Both the ring and the number of
-locks grow with every power level — three locks at power 1, fourteen at full
-power — so the same weapon is a scalpel early and a net late. Ordinary enemies
+fast homing missile at each painted target. The ring is deliberately huge — it
+opens at a full playfield width across (`Cfg.LOCK_RADIUS_MIN`) before it starts
+growing, because the mode buys its reach with movement speed and a ring you
+have to fly into things to use would just be a worse vulcan. What balances it
+is the salvo size, not the reach: three missiles at power 1 however much field
+the ring covers, rising to fourteen at full power. Both the ring and the cap
+grow with every power level, so the same weapon is a scalpel early and a net
+late. Ordinary enemies
 take at most `Cfg.LOCK_STACK_MAX` missiles each so a salvo spreads across a
 wave, but a boss will take the entire rack. A short dead time after each salvo
 (`Player.LOCK_REFIRE`) stops tapping `K` from machine-gunning single missiles.
