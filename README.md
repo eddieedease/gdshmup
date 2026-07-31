@@ -36,7 +36,9 @@ deliberately weaker per second than the same ship's vulcan; what you buy is that
 it hits things you are not pointing at. The option bits dock and go dark in this
 mode: power makes the *beam itself* bigger rather than adding more guns.
 
-`K` paints targets instead of firing. A ring opens around the ship and widens
+`K` paints targets *as well as* firing — the beam keeps going on either button
+(slower on `K` alone), because a weapon that stops shooting while you set up a
+lock leaves the screen empty for a second or two. A ring opens and widens
 while you hold it, bracketing everything it touches; releasing sends one very
 fast homing missile at each painted target. Both the ring and the number of
 locks grow with every power level — three locks at power 1, fourteen at full

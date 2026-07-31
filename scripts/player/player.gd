@@ -38,6 +38,9 @@ const LOCK_GROW := 430.0
 ## tapping K fires a one-missile salvo every tap - free damage, and a pile of
 ## launch whooshes layered on top of each other.
 const LOCK_REFIRE := 0.35
+## Fire-rate multiplier for the tracking beam while K is painting a lock and J
+## is not held. Higher is slower.
+const LOCK_FIRE_SLOW := 1.5
 
 const RESPAWN_DELAY := 0.85
 const INVULN_TIME := 2.6
@@ -332,12 +335,18 @@ func _vulcan(dt: float) -> void:
 
 ## Homing stream on J, lock-and-release missiles on K. Beams and bits are both
 ## idle in this mode; K still slows you, so it reads as "focus" either way.
+##
+## Either button keeps the beam firing. Painting a lock is an overlay on the
+## ship's gun, not a replacement for it: having K stop the stream outright left
+## the screen with no fire on it at all for the second or two a big rack takes
+## to fill, which is the one thing a shmup must never do. Lock-only fire is
+## slower, so J is still the choice when all you want is damage.
 func _tracker(dt: float) -> void:
 	AU.set_laser(false)
 	_hide_beams()
 	_update_locks(dt)
-	if shot_held:
-		_fire_track(dt)
+	if shot_held or laser_held:
+		_fire_track(dt, 1.0 if shot_held else LOCK_FIRE_SLOW)
 	else:
 		_shot_cd = 0.0
 
@@ -437,10 +446,10 @@ func _fire_shot(dt: float) -> void:
 ##
 ## Power makes this beam *bigger* rather than adding more of it: the bits stay
 ## dark in this mode, so everything the tracker does comes out of the ship.
-func _fire_track(dt: float) -> void:
+func _fire_track(dt: float, rate_mul: float = 1.0) -> void:
 	_shot_cd -= dt
 	if _shot_cd <= 0.0:
-		var rate := float(ship.track_rate)
+		var rate := float(ship.track_rate) * rate_mul
 		if is_hyper():
 			rate *= Cfg.HYPER_FIRE_BOOST
 		_shot_cd += rate
