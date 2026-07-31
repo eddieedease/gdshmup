@@ -28,10 +28,16 @@ const WEAPON_NAMES := ["VULCAN", "TRACKER"]
 ## Seconds between acquisitions while the lock ring is held. Quick: the cost of
 ## a salvo is the focus-speed movement and the ring's reach, not the wait.
 const LOCK_INTERVAL := 0.055
-## The ring opens tight and widens while K is held, so holding longer buys both
-## more targets and more reach. Radius in pixels, growth in pixels per second.
-const LOCK_RADIUS_START := 120.0
+## The ring opens at this fraction of its full radius and widens while K is held,
+## so holding longer buys both more targets and more reach. Both the opening and
+## the full size come from the ship's per-power lock_radius, so a powered-up
+## lock is visibly a wider net. Growth is in pixels per second.
+const LOCK_RADIUS_START_FRAC := 0.42
 const LOCK_GROW := 430.0
+## Dead time after a salvo before the ring can paint anything again. Without it,
+## tapping K fires a one-missile salvo every tap - free damage, and a pile of
+## launch whooshes layered on top of each other.
+const LOCK_REFIRE := 0.35
 
 const RESPAWN_DELAY := 0.85
 const INVULN_TIME := 2.6
@@ -91,8 +97,9 @@ var _lock_ring: LockRing
 var _locks: Array = []
 var _lock_cd := 0.0
 var _locking := false
-## Current ring radius, which grows from LOCK_RADIUS_START while K is held.
-var _lock_r := LOCK_RADIUS_START
+## Current ring radius, which grows while K is held. Reset via _lock_reset(),
+## which needs `ship`, so this initial value only covers construction.
+var _lock_r := 120.0
 var _shield: Sprite2D
 var _hitbox: Node2D
 var _trail: EngineTrail
@@ -468,23 +475,30 @@ func _update_locks(dt: float) -> void:
 
 	if not _locking:
 		_lock_ring.visible = false
-		_lock_r = LOCK_RADIUS_START
+		_lock_reset()
 		if was_locking:
 			_fire_locks()
 		return
 
-	_lock_r = minf(_lock_r + LOCK_GROW * dt, float(ship.lock_radius))
+	_lock_r = minf(_lock_r + LOCK_GROW * dt, lock_radius())
 
 	var cap: int = ShipDefs.at_power(ship, "lock_max", power)
 	_lock_cd -= dt
 	if _lock_cd <= 0.0 and _locks.size() < cap:
 		var t := _next_lock_target()
 		if t != null:
+			# Only a *new* target ticks. Stacking three missiles on one enemy
+			# (or a whole rack on a boss) is one acquisition as far as the ear
+			# is concerned; ticking per missile piled them into a machine-gun.
+			var fresh := not _locks.has(t)
 			_locks.append(t)
 			_lock_cd = LOCK_INTERVAL
-			# Steps up with each target in the rack, so a filling lock is
-			# audible without having to watch the counter.
-			AU.play("lock", 0.02, 0.0, 1.0 + 0.06 * float(_locks.size() - 1))
+			if fresh:
+				# Steps up with each target painted, so a filling rack is
+				# audible without having to watch the counter. Capped, or a
+				# twelve-slot Goliath lock climbs into a whistle.
+				AU.play("lock", 0.02, 0.0,
+					1.0 + 0.05 * float(mini(_distinct_locks() - 1, 6)))
 
 	_lock_ring.visible = true
 	_lock_ring.origin = position
@@ -524,6 +538,15 @@ func _lock_count(e: Node2D) -> int:
 		if l == e:
 			n += 1
 	return n
+
+
+## How many separate enemies are painted, as opposed to missiles committed.
+func _distinct_locks() -> int:
+	var seen: Array = []
+	for l in _locks:
+		if not seen.has(l):
+			seen.append(l)
+	return seen.size()
 
 
 func _prune_locks() -> void:
@@ -569,15 +592,23 @@ func _fire_locks() -> void:
 	_locks.clear()
 	if fired == 0:
 		return
+	# Persists across the release, so the next hold cannot paint until it
+	# expires - the ring itself is the cooldown indicator.
+	_lock_cd = LOCK_REFIRE
 	fx.shockwave(position, 130.0, col, 0.35, 6.0)
 	AU.play("missile", 0.08)
+
+
+## Shrinks the ring back to its opening size for the next hold.
+func _lock_reset() -> void:
+	_lock_r = lock_radius() * LOCK_RADIUS_START_FRAC
 
 
 func _clear_locks() -> void:
 	_locks.clear()
 	_locking = false
 	_lock_cd = 0.0
-	_lock_r = LOCK_RADIUS_START
+	_lock_reset()
 	if _lock_ring != null:
 		_lock_ring.visible = false
 
@@ -615,6 +646,11 @@ func lock_count() -> int:
 
 func lock_cap() -> int:
 	return int(ShipDefs.at_power(ship, "lock_max", power))
+
+
+## The ring's full radius at the current power level.
+func lock_radius() -> float:
+	return float(ShipDefs.at_power(ship, "lock_radius", power))
 
 
 ## Hyper fattens, accelerates and tints your fire.

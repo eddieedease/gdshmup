@@ -37,10 +37,13 @@ it hits things you are not pointing at. The option bits dock and go dark in this
 mode: power makes the *beam itself* bigger rather than adding more guns.
 
 `K` paints targets instead of firing. A ring opens around the ship and widens
-while you hold it, bracketing everything it touches up to a per-ship limit;
-releasing sends one very fast homing missile at each painted target. Ordinary
-enemies take at most `Cfg.LOCK_STACK_MAX` missiles each so a salvo spreads
-across a wave, but a boss will take the entire rack.
+while you hold it, bracketing everything it touches; releasing sends one very
+fast homing missile at each painted target. Both the ring and the number of
+locks grow with every power level — three locks at power 1, fourteen at full
+power — so the same weapon is a scalpel early and a net late. Ordinary enemies
+take at most `Cfg.LOCK_STACK_MAX` missiles each so a salvo spreads across a
+wave, but a boss will take the entire rack. A short dead time after each salvo
+(`Player.LOCK_REFIRE`) stops tapping `K` from machine-gunning single missiles.
 
 Every ship flies both modes with its own numbers — see the `track_*` and
 `lock_*` arrays in `scripts/data/ship_defs.gd`. Hornet is even-handed, Falcon
@@ -79,7 +82,7 @@ enemy, which is the only way the range-limited lock ring gets exercised),
 | --- | --- |
 | `P` | Power chip. Later bars cost more chips, so full power lands mid-run. |
 | `B` | A bomb. Stops dropping while you already hold `Cfg.MAX_BOMBS` (3) — a full rack pays out as points instead, so bosses cannot simply be deleted with a hoarded stock. |
-| `W` | Swaps between VULCAN and TRACKER. Two per stage (`Cfg.WEAPON_DROPS_PER_STAGE`) on a fixed counter rather than a die roll, plus one from every boss. |
+| `W` | Swaps between VULCAN and TRACKER. Four per stage (`Cfg.WEAPON_DROPS_PER_STAGE`), one every 18 kills rather than on a die roll, plus one from every boss. Paced on kills, not on the enemies that drop power and bombs — those are scarce enough that gating on them left a whole stage going by on one weapon. |
 | `1UP` | Spare ship. Dropped by the bosses flagged in `BossDefs`. |
 | stars | Score, and a trickle of hyper charge. |
 

@@ -53,12 +53,17 @@ const MAX_BOMBS := 3
 const CHAIN_TIMEOUT := 1.35
 
 # --- Weapons -----------------------------------------------------------------
-## Weapon items per stage. Two switches is enough to answer "wrong tool for this
-## stage" without letting you flip modes fight by fight.
-const WEAPON_DROPS_PER_STAGE := 2
-## Every Nth meaningful drop in a stage also coughs up a weapon item, until the
-## stage's allowance runs out. Deterministic so the pacing is the same each run.
-const WEAPON_DROP_EVERY := 4
+## Weapon items per stage. Being stuck with the wrong gun for most of a stage is
+## worse than being able to flip modes fairly freely, so these are common: four
+## a stage, plus one from every boss.
+const WEAPON_DROPS_PER_STAGE := 4
+## Every Nth kill in a stage coughs up a weapon item, until the stage's
+## allowance runs out. Deterministic, so the pacing is the same every run.
+##
+## Counted over *all* kills rather than over the enemies that drop power and
+## bombs: those are scarce enough that gating on them left a whole stage going
+## by on one weapon.
+const WEAPON_DROP_EVERY := 18
 ## Tracking fire is tinted toward this so the mode is readable at a glance.
 ## Player fire is drawn with BULLET_GAIN and clips toward white, so a pale tint
 ## would come out looking exactly like a vulcan bolt. This one is kept low in

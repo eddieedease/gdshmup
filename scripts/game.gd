@@ -59,10 +59,9 @@ var _absorbed := 0
 var _dilate_token := 0
 var _pause_menu: PauseMenu
 var _boss: Boss = null
-## Weapon-item budget for the current stage, and the running count of drops that
-## were eligible to carry one.
+## Weapon-item budget for the current stage, and the kill count it is paced by.
 var _weapon_left := 0
-var _weapon_drops := 0
+var _weapon_kills := 0
 
 
 func _ready() -> void:
@@ -278,7 +277,7 @@ func _loop_difficulty(base: Dictionary) -> Dictionary:
 func _apply_stage(idx: int) -> void:
 	var meta := LevelDefs.meta(idx)
 	_weapon_left = Cfg.WEAPON_DROPS_PER_STAGE
-	_weapon_drops = 0
+	_weapon_kills = 0
 	_terrain.set_stage(int(meta.terrain), 1000 + stage * 977)
 	for d in [_dust, _dust_near]:
 		d.speed = _terrain.speed * 1.7
@@ -541,11 +540,11 @@ func _chain_milestone(at: Vector2) -> void:
 func _drop_for(e: Enemy) -> void:
 	var kind := String(e.spec.get("drop", "star"))
 	var p: Vector2 = e.position
+	_maybe_weapon(p)
 	match kind:
 		"power":
 			_spawn_item(Item.Kind.POWER, p, Vector2(randf_range(-70, 70), -150))
 			_spawn_item(Item.Kind.STAR, p, Vector2(randf_range(-120, 120), -110))
-			_maybe_weapon(p)
 		"bomb":
 			# A full rack pays out as points instead: carrying a deep stock of
 			# bombs turned bosses into something you simply deleted.
@@ -557,7 +556,6 @@ func _drop_for(e: Enemy) -> void:
 			for i in 3:
 				_spawn_item(Item.Kind.STAR, p,
 					Vector2(randf_range(-160, 160), randf_range(-170, -60)))
-			_maybe_weapon(p)
 		"star":
 			_spawn_item(Item.Kind.STAR, p,
 				Vector2(randf_range(-100, 100), randf_range(-150, -60)))
@@ -582,13 +580,13 @@ func _drop_for(e: Enemy) -> void:
 		_shake = 16.0
 
 
-## Weapon items are handed out on a counter rather than a die roll, so every run
-## gets the same couple of switch opportunities at the same points in a stage.
+## Weapon items are handed out on a kill counter rather than a die roll, so
+## every run gets the same switch opportunities at the same points in a stage.
 func _maybe_weapon(at: Vector2) -> void:
 	if _weapon_left <= 0:
 		return
-	_weapon_drops += 1
-	if _weapon_drops % Cfg.WEAPON_DROP_EVERY != 0:
+	_weapon_kills += 1
+	if _weapon_kills % Cfg.WEAPON_DROP_EVERY != 0:
 		return
 	_weapon_left -= 1
 	_spawn_item(Item.Kind.WEAPON, at, Vector2(randf_range(-80, 80), -190))

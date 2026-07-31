@@ -160,6 +160,8 @@ const THROTTLE := {
 	"shot": 0.05,
 	"track": 0.06,
 	"lock": 0.05,
+	# Long enough that two salvos can never overlap into one smeared whoosh.
+	"missile": 0.30,
 	"hit": 0.045,
 	"graze": 0.07,
 	"item": 0.05,
