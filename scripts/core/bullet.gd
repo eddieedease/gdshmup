@@ -36,6 +36,10 @@ var ang_vel := 0.0      ## Constant turn rate, for curving bullets.
 ## `homing_time` remains.
 var homing := 0.0
 var homing_time := 0.0
+## A specific enemy to chase, overriding the manager's "nearest thing" target.
+## Lock-on missiles set this so a salvo stays on the targets it was fired at
+## instead of all re-converging on whatever drifts closest.
+var seek: Node2D = null
 
 ## The bullet hangs motionless for `delay` seconds after spawning, a staple of
 ## danmaku telegraphing.
@@ -88,6 +92,7 @@ func reset() -> void:
 	ang_vel = 0.0
 	homing = 0.0
 	homing_time = 0.0
+	seek = null
 	delay = 0.0
 	wave_amp = 0.0
 	wave_freq = 0.0

@@ -178,6 +178,19 @@ func _style(b: Bullet, style: String, mul: float) -> void:
 			b.frames = Art.apply_sheet(b, "missile", true)
 			b.scale = Vector2.ONE * 0.24 * mul
 			b.radius = 18.0 * mul
+		"ptrack":
+			# Short wave segments: fired in a stream they read as one snaking
+			# laser rather than as a line of separate shots. Long and narrow,
+			# so the chain of them looks continuous end to end.
+			b.frames = Art.apply_sheet(b, "wavebeam", true)
+			b.scale = Vector2(0.24, 0.46) * mul
+			b.radius = 15.0 * mul
+		"plock":
+			# Lean and long rather than fat: these cross the screen at close to
+			# 2500px/s, so they need to read as darts, not as drifting rockets.
+			b.frames = Art.apply_sheet(b, "missile", true)
+			b.scale = Vector2(0.20, 0.38) * mul
+			b.radius = 17.0 * mul
 		_:
 			b.frames = Art.apply_sheet(b, "enemyshot", true)
 			b.scale = Vector2.ONE * 0.19 * mul
@@ -244,7 +257,7 @@ func _update_player_team(dt: float) -> void:
 		if i < 0:
 			break
 		var b: Bullet = _live[i]
-		var keep := b.step(dt, _nearest_enemy(b.position))
+		var keep := b.step(dt, _seek_target(b))
 		if keep:
 			# Reverse index: enemy_hit can kill the target, which erases it
 			# from `enemies` while we are still walking the array.
@@ -268,6 +281,17 @@ func _update_player_team(dt: float) -> void:
 		if not keep:
 			_retire(i, b)
 		i -= 1
+
+
+## What this bullet should steer at: its own locked target while that target is
+## still alive, otherwise whatever is nearest. A missile whose target dies keeps
+## flying and re-acquires rather than sailing off the top of the screen.
+func _seek_target(b: Bullet) -> Vector2:
+	if b.seek != null:
+		if is_instance_valid(b.seek) and b.seek.alive and b.seek.hittable:
+			return b.seek.position
+		b.seek = null
+	return _nearest_enemy(b.position)
 
 
 func _nearest_enemy(from: Vector2) -> Vector2:

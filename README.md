@@ -16,17 +16,72 @@ Developed by EDease.
 | Fullscreen | `F11` | — |
 | Screenshot | `F12` (saves to `user://`) | — |
 
-**Shot** keeps you at full speed with a wide spread and the option bits fanned
-out. **Laser** cuts your speed to roughly 40%, tucks the bits in tight and
-replaces the spread with a piercing beam — the trade that makes precise dodging
-possible. Holding both favours the laser. Your real hitbox is a few pixels wide
-and is shown as a dot while the laser is held.
+`J` and `K` always mean "fast weapon" and "slow weapon", but what they fire
+depends on which of the two **weapon modes** you are carrying. `K` slows you to
+roughly 40% in both, which is the trade that makes precise dodging possible, and
+holding both buttons favours `K`. Your real hitbox is a few pixels wide and is
+shown as a dot while `K` is held.
+
+### VULCAN (starting weapon)
+
+**Shot** (`J`) is a wide spread at full speed with the option bits fanned out.
+**Laser** (`K`) tucks the bits in tight and replaces the spread with a piercing
+beam. Power widens the spread, adds bits, and fattens the beam.
+
+### TRACKER
+
+Picked up in the field (see below). One homing beam fires out of the ship on
+`J` — a braided rope of segments that snakes onto whatever is nearest. It is
+deliberately weaker per second than the same ship's vulcan; what you buy is that
+it hits things you are not pointing at. The option bits dock and go dark in this
+mode: power makes the *beam itself* bigger rather than adding more guns.
+
+`K` paints targets instead of firing. A ring opens around the ship and widens
+while you hold it, bracketing everything it touches up to a per-ship limit;
+releasing sends one very fast homing missile at each painted target. Ordinary
+enemies take at most `Cfg.LOCK_STACK_MAX` missiles each so a salvo spreads
+across a wave, but a boss will take the entire rack.
+
+Every ship flies both modes with its own numbers — see the `track_*` and
+`lock_*` arrays in `scripts/data/ship_defs.gd`. Hornet is even-handed, Falcon
+gets a thin fast hard-turning ribbon and a small ring, Goliath a slow fat rope,
+the widest ring and by far the heaviest salvo.
 
 ## Layout
 
-The playfield is a fixed 810x1080 column (classic 3:4 arcade "tate" aspect)
-centred in the window. The sidebars fill whatever is left over and double as a
-mask for anything that spills outside the column.
+Gameplay runs in a fixed 810x1080 column (classic 3:4 arcade "tate" aspect), so
+every ship, bullet and spawn point is authored in the same coordinates whatever
+you play on. That column is scaled to the window height and centred at runtime
+(`Cfg.field_rect`), which keeps 16:10 and 3:2 laptops free of the dead strip an
+un-scaled column would leave under the field. The sidebars fill whatever is left
+over and double as a mask for anything that spills outside the column; they
+never shrink below `Cfg.MIN_SIDEBAR`, and on a window too tall for even that the
+field is capped top and bottom with matching cabinet trim.
+
+## Dev switches
+
+Passed after `--`. See `_apply_cli` in `scripts/main.gd` for the full list.
+`--size=WxH` forces a windowed size (for aspect-ratio checks) and
+`--shot=PATH --shot-at=FRAME` grabs a still and quits, so a change can be
+eyeballed without a human at the keyboard:
+
+```bash
+godot --path . -- --size=1600x1000 --screen=game --shot=shot.png --shot-at=150
+```
+
+`--demo` drives the ship itself, and pairs with `--hunt` (fly at the nearest
+enemy, which is the only way the range-limited lock ring gets exercised),
+`--power=N`, `--weapon-at=SECONDS`, `--boss`, `--stage=N` and `--ship=N`.
+
+## Pickups
+
+| Item | Effect |
+| --- | --- |
+| `P` | Power chip. Later bars cost more chips, so full power lands mid-run. |
+| `B` | A bomb. Stops dropping while you already hold `Cfg.MAX_BOMBS` (3) — a full rack pays out as points instead, so bosses cannot simply be deleted with a hoarded stock. |
+| `W` | Swaps between VULCAN and TRACKER. Two per stage (`Cfg.WEAPON_DROPS_PER_STAGE`) on a fixed counter rather than a die roll, plus one from every boss. |
+| `1UP` | Spare ship. Dropped by the bosses flagged in `BossDefs`. |
+| stars | Score, and a trickle of hyper charge. |
 
 ## Scoring
 

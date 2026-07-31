@@ -61,6 +61,35 @@ const BANK := {
 		"f0": 1500.0, "f1": 2100.0, "dur": 0.06, "wave": Wave.SINE,
 		"vol": 0.24, "decay": 2.4,
 	}],
+	# --- Tracker weapon ------------------------------------------------------
+	# The homing stream. Sweeps *upward* where "shot" sweeps down, and it is a
+	# sine rather than a square, so a stream of these reads as an energy weapon
+	# and never gets confused with vulcan fire underneath it.
+	"track": [{
+		"f0": 420.0, "f1": 1250.0, "dur": 0.075, "wave": Wave.SINE,
+		"noise": 0.06, "vol": 0.20, "decay": 2.6, "sweep": 0.6,
+		"vib": 90.0, "vib_hz": 60.0,
+	}],
+	# One tick per target painted. Deliberately dry and mechanical - it is a
+	# counter, not a reward, and it can fire eight times in a second.
+	"lock": [{
+		"f0": 1800.0, "f1": 2400.0, "dur": 0.035, "wave": Wave.SQUARE,
+		"noise": 0.12, "vol": 0.17, "decay": 3.2,
+	}],
+	# Salvo launch: a short noisy whoosh under a falling tone.
+	"missile": [
+		{"f0": 1500.0, "f1": 520.0, "dur": 0.10, "wave": Wave.SAW,
+			"noise": 0.5, "vol": 0.34, "decay": 1.6, "sweep": 1.2},
+		{"f0": 700.0, "f1": 240.0, "dur": 0.22, "wave": Wave.TRI,
+			"noise": 0.62, "vol": 0.30, "decay": 1.8, "sweep": 1.5},
+	],
+	# Weapon swap: two clean rising notes, distinct from the powerup arpeggio.
+	"weapon": [
+		{"f0": 880.0, "f1": 880.0, "dur": 0.07, "wave": Wave.TRI,
+			"vol": 0.34, "decay": 0.9},
+		{"f0": 1480.0, "f1": 1760.0, "dur": 0.26, "wave": Wave.TRI,
+			"vol": 0.40, "decay": 1.6, "sweep": 0.7},
+	],
 	"extend": [
 		{"f0": 523.0, "f1": 523.0, "dur": 0.09, "wave": Wave.SQUARE,
 			"vol": 0.36, "decay": 0.7},
@@ -129,6 +158,8 @@ const BANK := {
 ## Minimum seconds between repeats, for effects that can fire every frame.
 const THROTTLE := {
 	"shot": 0.05,
+	"track": 0.06,
+	"lock": 0.05,
 	"hit": 0.045,
 	"graze": 0.07,
 	"item": 0.05,
@@ -213,8 +244,10 @@ func set_drone(active: bool, intensity: float = 0.0) -> void:
 # --- Playback ----------------------------------------------------------------
 
 ## Plays a bank effect. `pitch_jitter` randomises pitch for variety, which stops
-## repeated kills from sounding like a machine.
-func play(name: String, pitch_jitter: float = 0.0, db: float = 0.0) -> void:
+## repeated kills from sounding like a machine; `pitch` shifts it deliberately,
+## for effects that step up as something accumulates (the lock rack).
+func play(name: String, pitch_jitter: float = 0.0, db: float = 0.0,
+		pitch: float = 1.0) -> void:
 	if not _bank.has(name):
 		return
 	var now := Time.get_ticks_msec() / 1000.0
@@ -228,7 +261,7 @@ func play(name: String, pitch_jitter: float = 0.0, db: float = 0.0) -> void:
 	var p := _pool[_next_voice]
 	_next_voice = (_next_voice + 1) % _pool.size()
 	p.stream = _bank[name]
-	p.pitch_scale = 1.0 + randf_range(-pitch_jitter, pitch_jitter)
+	p.pitch_scale = maxf(pitch + randf_range(-pitch_jitter, pitch_jitter), 0.05)
 	p.volume_db = sfx_db(db)
 	p.play()
 

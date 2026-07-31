@@ -2,9 +2,17 @@ class_name ShipDefs
 extends RefCounted
 ## The three selectable ships.
 ##
-## Each ship carries the DoDonPachi-style pair of weapons:
-##   SHOT  (J) - rapid spread, full movement speed
-##   LASER (K) - focused continuous beam, movement slowed for precise dodging
+## Each ship carries two weapon modes, swapped in the field by picking up a W
+## item (see Player.Weapon). Both modes keep the same two-button shape:
+##
+##   VULCAN   SHOT  (J) - rapid spread, full movement speed
+##            LASER (K) - focused continuous beam, movement slowed
+##   TRACKER  SHOT  (J) - homing laser segments, weaker per hit but they land
+##            LASER (K) - hold to paint targets in a ring, release for missiles
+##
+## The `track_*` and `lock_*` arrays below are what make TRACKER a real trade
+## rather than a free upgrade: every ship's tracking damage sits well under its
+## own vulcan output, and the missiles are the mode's burst instead.
 ##
 ## Per-power arrays are indexed by (power - 1), power running 1..Cfg.MAX_POWER
 ## (12: three bars of four). Growth from the end of bar one to full power is
@@ -41,6 +49,15 @@ const SHIPS := [
 			455.0, 495.0, 535.0, 575.0, 615.0, 658.0],
 		"opt_spread": [46.0, 84.0, 118.0, 150.0],
 		"opt_tight": [13.0, 25.0, 37.0, 49.0],
+		# Tracker: the even-handed version. Middling cycle, middling turn.
+		"track_rate": 0.075,
+		"track_damage": [6, 7, 8, 10, 11, 12, 14, 15, 17, 18, 20, 22],
+		"track_scale": [0.55, 0.62, 0.70, 0.78, 0.86, 0.94,
+			1.02, 1.10, 1.18, 1.28, 1.36, 1.45],
+		"track_turn": 620.0,
+		"lock_radius": 350.0,
+		"lock_max": [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8],
+		"lock_damage": [30, 34, 38, 44, 50, 56, 62, 70, 78, 86, 94, 104],
 		"stats": {"SPEED": 3, "POWER": 3, "SPREAD": 3},
 	},
 	{
@@ -68,6 +85,16 @@ const SHIPS := [
 			545.0, 590.0, 640.0, 690.0, 738.0, 788.0],
 		"opt_spread": [34.0, 62.0, 88.0, 114.0],
 		"opt_tight": [9.0, 18.0, 27.0, 36.0],
+		# Tracker: a thin, fast, hard-turning ribbon, in keeping with a hull built
+		# around picking single targets off.
+		"track_rate": 0.055,
+		"track_damage": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+		"track_scale": [0.42, 0.48, 0.54, 0.60, 0.66, 0.72,
+			0.78, 0.84, 0.92, 1.00, 1.08, 1.16],
+		"track_turn": 780.0,
+		"lock_radius": 300.0,
+		"lock_max": [2, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7],
+		"lock_damage": [26, 30, 34, 40, 45, 50, 56, 62, 68, 75, 82, 90],
 		"stats": {"SPEED": 5, "POWER": 4, "SPREAD": 1},
 	},
 	{
@@ -95,6 +122,16 @@ const SHIPS := [
 			410.0, 445.0, 480.0, 515.0, 550.0, 590.0],
 		"opt_spread": [56.0, 100.0, 140.0, 178.0],
 		"opt_tight": [17.0, 32.0, 46.0, 60.0],
+		# Tracker: a slow, fat, lazily-turning rope, plus the widest lock ring
+		# and by far the heaviest salvo.
+		"track_rate": 0.100,
+		"track_damage": [9, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 31],
+		"track_scale": [0.72, 0.82, 0.92, 1.02, 1.12, 1.24,
+			1.36, 1.48, 1.58, 1.68, 1.78, 1.90],
+		"track_turn": 460.0,
+		"lock_radius": 430.0,
+		"lock_max": [3, 3, 4, 4, 5, 6, 6, 7, 8, 9, 10, 12],
+		"lock_damage": [42, 48, 56, 64, 74, 84, 94, 105, 116, 128, 140, 155],
 		"stats": {"SPEED": 1, "POWER": 5, "SPREAD": 5},
 	},
 ]

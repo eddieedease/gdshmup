@@ -8,13 +8,13 @@ extends CanvasLayer
 
 const PAD := 26.0
 
-var field_x := 0.0
 var view_size := Vector2(1920, 1080)
 
 var _root: Control
 var _left: PanelBox
 var _right: PanelBox
 var _overlay: FieldOverlay
+var _bezel: Bezel
 var _sparks: ChargeSparks
 var _font: Font
 
@@ -32,6 +32,8 @@ var _l_keys: Label
 var _l_ship_code: Label
 var _l_ship_name: Label
 var _ship_icon: Sprite2D
+var _l_weapon: Label
+var _l_lock: Label
 var _power_bar: Segments
 var _lives: IconRow
 var _bombs: IconRow
@@ -59,6 +61,10 @@ func _ready() -> void:
 	_right = PanelBox.new()
 	_right.side = 1
 	_root.add_child(_right)
+
+	_bezel = Bezel.new()
+	_bezel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(_bezel)
 
 	_overlay = FieldOverlay.new()
 	_root.add_child(_overlay)
@@ -134,6 +140,10 @@ func _build_right() -> void:
 	_ship_icon.centered = true
 	_right.add_child(_ship_icon)
 
+	_label(_right, "WEAPON", 15, Cfg.UI_DIM).name = "WpnCap"
+	_l_weapon = _label(_right, "VULCAN", 24, Cfg.UI_TEXT)
+	_l_lock = _label(_right, "", 15, Cfg.UI_DIM)
+
 	_label(_right, "POWER", 15, Cfg.UI_DIM).name = "PowCap"
 	_power_bar = Segments.new()
 	_right.add_child(_power_bar)
@@ -164,19 +174,25 @@ func _build_right() -> void:
 
 func _layout() -> void:
 	view_size = get_viewport().get_visible_rect().size
-	field_x = Cfg.field_x(view_size)
-	var right_x := field_x + Cfg.FIELD_W
+	var field := Cfg.field_rect(view_size)
+	var field_x := field.position.x
+	var right_x := field.end.x
 	var h := view_size.y
 
 	_left.position = Vector2.ZERO
 	_left.size = Vector2(field_x, h)
 	_right.position = Vector2(right_x, 0)
 	_right.size = Vector2(maxf(view_size.x - right_x, 0.0), h)
-	_overlay.position = Vector2(field_x, 0)
-	_overlay.size = Vector2(Cfg.FIELD_W, h)
+	# The overlay draws in field-local 810x1080 space and rides the playfield's
+	# scale, so banners and vignettes stay glued to the field at any window size.
+	_overlay.position = field.position
+	_overlay.size = Vector2(Cfg.FIELD_W, Cfg.FIELD_H)
+	_overlay.scale = Vector2.ONE * (field.size.x / Cfg.FIELD_W)
+	_bezel.field = field
 	_left.queue_redraw()
 	_right.queue_redraw()
 	_overlay.queue_redraw()
+	_bezel.queue_redraw()
 
 	var w := field_x - PAD * 2.0
 	_stack(_left, w, [
@@ -196,6 +212,7 @@ func _layout() -> void:
 	_ship_icon.position = Vector2(PAD + rw * 0.5, 250.0)
 	_ship_icon.scale = Vector2.ONE * 0.30
 	_stack(_right, rw, [
+		["WpnCap", 26.0], [_l_weapon, 32.0], [_l_lock, 26.0],
 		["PowCap", 26.0], [_power_bar, 40.0],
 		["LifeCap", 26.0], [_lives, 42.0],
 		["BombCap", 26.0], [_bombs, 42.0],
@@ -278,6 +295,25 @@ func set_hyper(charge: float, hyper_active: bool) -> void:
 	else:
 		_l_hyper.text = "%d%%" % int(charge * 100.0)
 		_l_hyper.modulate.a = 1.0
+
+
+## Current weapon mode, plus the lock tally while TRACKER is painting targets.
+func set_weapon(name: String, tracking: bool, locks: int, lock_cap: int) -> void:
+	_l_weapon.text = name
+	_l_weapon.add_theme_color_override("font_color",
+		Item.COLORS[Item.Kind.WEAPON] if tracking else Cfg.UI_TEXT)
+	if not tracking:
+		_l_lock.text = "K  LASER"
+		_l_lock.add_theme_color_override("font_color", Cfg.UI_DIM)
+		return
+	if locks > 0:
+		_l_lock.text = "LOCK  %d / %d" % [locks, lock_cap]
+		# Goes gold on a full rack, so you know when holding K stops paying.
+		_l_lock.add_theme_color_override("font_color",
+			Cfg.UI_GOLD if locks >= lock_cap else Cfg.UI_ACCENT)
+	else:
+		_l_lock.text = "K  LOCK  (%d)" % lock_cap
+		_l_lock.add_theme_color_override("font_color", Cfg.UI_DIM)
 
 
 func set_status(power: int, lives: int, bombs: int, graze: int,
@@ -389,6 +425,34 @@ class PanelBox:
 				Vector2(x + 20.0, y + band - 10.0), Vector2(x, y + band),
 			]), Color(accent.r, accent.g, accent.b, 0.12 + 0.30 * hot))
 			y += band * 2.0
+
+## Caps the field column above and below the playfield. Only has anything to
+## draw on a window so tall that the sidebars hit MIN_SIDEBAR and the field can
+## no longer fill the height - without it those strips read as black bars.
+## Doubles as a mask for anything the field draws past its own top and bottom.
+class Bezel:
+	extends Control
+	var field := Rect2()
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		_cap(Rect2(Vector2(field.position.x, 0.0),
+			Vector2(field.size.x, field.position.y)))
+		_cap(Rect2(Vector2(field.position.x, field.end.y),
+			Vector2(field.size.x, size.y - field.end.y)))
+
+	## Same plate-inside-a-frame treatment as PanelBox, so the caps read as part
+	## of the same cabinet rather than as dead space.
+	func _cap(r: Rect2) -> void:
+		if r.size.y <= 0.0:
+			return
+		draw_rect(r, Cfg.UI_BG)
+		var inset := 14.0
+		if r.size.y > inset * 2.0:
+			draw_rect(Rect2(r.position + Vector2(inset, inset),
+				r.size - Vector2(inset * 2.0, inset * 2.0)), Cfg.UI_PANEL)
 
 class Bar:
 	extends Control

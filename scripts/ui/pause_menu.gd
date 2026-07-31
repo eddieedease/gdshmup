@@ -42,7 +42,7 @@ func _ready() -> void:
 
 func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
-	_panel.field_x = Cfg.field_x(vs)
+	_panel.field = Cfg.field_rect(vs)
 	_panel.view = vs
 	_panel.queue_redraw()
 
@@ -146,7 +146,7 @@ func _refresh() -> void:
 
 class MenuPanel:
 	extends Control
-	var field_x := 0.0
+	var field := Rect2(555, 0, Cfg.FIELD_W, Cfg.FIELD_H)
 	var view := Vector2(1920, 1080)
 	var sel := 0
 	var music := 0.75
@@ -160,8 +160,7 @@ class MenuPanel:
 
 		var w := 560.0
 		var h := 430.0
-		var box := Rect2(Vector2(field_x + (Cfg.FIELD_W - w) * 0.5,
-			view.y * 0.5 - h * 0.5), Vector2(w, h))
+		var box := Rect2(field.get_center() - Vector2(w, h) * 0.5, Vector2(w, h))
 		draw_rect(box, Cfg.UI_PANEL)
 		draw_rect(box, Cfg.UI_ACCENT, false, 3.0)
 

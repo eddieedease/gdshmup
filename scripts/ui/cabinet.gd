@@ -13,6 +13,7 @@ var content: Control      ## Menu UI, sized to the playfield, drawn on top.
 var _layer: CanvasLayer
 var _left: Hud.PanelBox
 var _right: Hud.PanelBox
+var _bezel: Hud.Bezel
 var _drifters: Array[Sprite2D] = []
 var _drift_speed: PackedFloat32Array = PackedFloat32Array()
 var _t := 0.0
@@ -64,6 +65,9 @@ func build(terrain_stage: int) -> void:
 	_right.side = 1
 	_layer.add_child(_right)
 
+	_bezel = Hud.Bezel.new()
+	_layer.add_child(_bezel)
+
 	content = Control.new()
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(content)
@@ -74,16 +78,24 @@ func build(terrain_stage: int) -> void:
 
 func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
-	var fx := Cfg.field_x(vs)
-	field.position = Vector2(fx, 0)
+	var rect := Cfg.field_rect(vs)
+	var s := rect.size.x / Cfg.FIELD_W
+	field.position = rect.position
+	field.scale = Vector2.ONE * s
 	_left.position = Vector2.ZERO
-	_left.size = Vector2(fx, vs.y)
-	_right.position = Vector2(fx + Cfg.FIELD_W, 0)
-	_right.size = Vector2(maxf(vs.x - fx - Cfg.FIELD_W, 0.0), vs.y)
-	content.position = Vector2(fx, 0)
-	content.size = Vector2(Cfg.FIELD_W, vs.y)
+	_left.size = Vector2(rect.position.x, vs.y)
+	_right.position = Vector2(rect.end.x, 0)
+	_right.size = Vector2(maxf(vs.x - rect.end.x, 0.0), vs.y)
+	_bezel.position = Vector2.ZERO
+	_bezel.size = vs
+	_bezel.field = rect
+	# Menu content is laid out in the same 810x1080 space as the playfield.
+	content.position = rect.position
+	content.size = Vector2(Cfg.FIELD_W, Cfg.FIELD_H)
+	content.scale = Vector2.ONE * s
 	_left.queue_redraw()
 	_right.queue_redraw()
+	_bezel.queue_redraw()
 	content.queue_redraw()
 
 

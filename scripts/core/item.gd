@@ -6,7 +6,7 @@ extends Node2D
 ## gem with a letter. They pop outward, settle into a downward drift, and are
 ## magnetised to the player when close — or from anywhere while a bomb is active.
 
-enum Kind { POWER, BOMB, EXTEND, STAR, BIG_STAR }
+enum Kind { POWER, BOMB, EXTEND, STAR, BIG_STAR, WEAPON }
 
 const LABELS := {
 	Kind.POWER: "P",
@@ -14,6 +14,7 @@ const LABELS := {
 	Kind.EXTEND: "1UP",
 	Kind.STAR: "",
 	Kind.BIG_STAR: "",
+	Kind.WEAPON: "W",
 }
 const COLORS := {
 	Kind.POWER: Color(1.0, 0.45, 0.25),
@@ -21,6 +22,9 @@ const COLORS := {
 	Kind.EXTEND: Color(0.45, 1.0, 0.55),
 	Kind.STAR: Color(1.0, 0.85, 0.35),
 	Kind.BIG_STAR: Color(1.0, 0.65, 0.9),
+	# Deliberately close to Cfg.TRACK_TINT: the pickup and the fire it grants
+	# are the same colour, which is the whole hint.
+	Kind.WEAPON: Color(0.66, 0.42, 1.0),
 }
 const SIZES := {
 	Kind.POWER: 15.0,
@@ -28,6 +32,7 @@ const SIZES := {
 	Kind.EXTEND: 18.0,
 	Kind.STAR: 5.5,
 	Kind.BIG_STAR: 8.5,
+	Kind.WEAPON: 17.0,
 }
 
 var kind: int = Kind.POWER

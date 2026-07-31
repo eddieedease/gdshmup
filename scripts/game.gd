@@ -2,8 +2,8 @@ class_name Game
 extends Node2D
 ## The playing scene: builds the field, runs the three stages, keeps the score.
 ##
-## Everything gameplay-related lives under `_field`, a Node2D shifted to the
-## left edge of the 810px playfield so all gameplay code can work in a clean
+## Everything gameplay-related lives under `_field`, a Node2D moved and scaled
+## onto Cfg.field_rect() so all gameplay code can work in a clean
 ## 0..810 x 0..1080 coordinate space regardless of the real window size.
 
 signal finished(cleared: bool)
@@ -51,6 +51,7 @@ var _options_root: Node2D
 var _shake := 0.0
 var _next_extend := 0
 var _field_base := Vector2.ZERO
+var _field_scale := 1.0
 var _paused := false
 var _shutting_down := false
 var _absorbed := 0
@@ -58,6 +59,10 @@ var _absorbed := 0
 var _dilate_token := 0
 var _pause_menu: PauseMenu
 var _boss: Boss = null
+## Weapon-item budget for the current stage, and the running count of drops that
+## were eligible to carry one.
+var _weapon_left := 0
+var _weapon_drops := 0
 
 
 func _ready() -> void:
@@ -211,8 +216,17 @@ func _update_boss_mood() -> void:
 
 
 func _layout() -> void:
-	_field_base = Vector2(Cfg.field_x(get_viewport().get_visible_rect().size), 0.0)
+	var rect := Cfg.field_rect(get_viewport().get_visible_rect().size)
+	_field_base = rect.position
+	_field_scale = rect.size.x / Cfg.FIELD_W
 	_field.position = _field_base
+	_field.scale = Vector2.ONE * _field_scale
+
+
+## Field-local point in viewport coordinates, for HUD effects that travel out of
+## the playfield and into the sidebars.
+func _to_screen(p: Vector2) -> Vector2:
+	return _field_base + p * _field_scale
 
 
 # --- Run flow ----------------------------------------------------------------
@@ -263,6 +277,8 @@ func _loop_difficulty(base: Dictionary) -> Dictionary:
 ## again from inside the transition flash so the swap is never seen.
 func _apply_stage(idx: int) -> void:
 	var meta := LevelDefs.meta(idx)
+	_weapon_left = Cfg.WEAPON_DROPS_PER_STAGE
+	_weapon_drops = 0
 	_terrain.set_stage(int(meta.terrain), 1000 + stage * 977)
 	for d in [_dust, _dust_near]:
 		d.speed = _terrain.speed * 1.7
@@ -488,7 +504,7 @@ func _on_enemy_died(e: Enemy) -> void:
 	if not _player.is_hyper():
 		var motes: int = 1 if e.score < 500 else (2 if e.score < 2000 else 4)
 		for i in motes:
-			_hud.charge_spark(e.position + _field.position)
+			_hud.charge_spark(_to_screen(e.position))
 	_drop_for(e)
 
 
@@ -529,11 +545,19 @@ func _drop_for(e: Enemy) -> void:
 		"power":
 			_spawn_item(Item.Kind.POWER, p, Vector2(randf_range(-70, 70), -150))
 			_spawn_item(Item.Kind.STAR, p, Vector2(randf_range(-120, 120), -110))
+			_maybe_weapon(p)
 		"bomb":
-			_spawn_item(Item.Kind.BOMB, p, Vector2(randf_range(-60, 60), -160))
+			# A full rack pays out as points instead: carrying a deep stock of
+			# bombs turned bosses into something you simply deleted.
+			if _player.bombs >= Cfg.MAX_BOMBS:
+				_spawn_item(Item.Kind.BIG_STAR, p,
+					Vector2(randf_range(-60, 60), -160))
+			else:
+				_spawn_item(Item.Kind.BOMB, p, Vector2(randf_range(-60, 60), -160))
 			for i in 3:
 				_spawn_item(Item.Kind.STAR, p,
 					Vector2(randf_range(-160, 160), randf_range(-170, -60)))
+			_maybe_weapon(p)
 		"star":
 			_spawn_item(Item.Kind.STAR, p,
 				Vector2(randf_range(-100, 100), randf_range(-150, -60)))
@@ -545,6 +569,9 @@ func _drop_for(e: Enemy) -> void:
 		# is reliably up a life by the mid-game rather than waiting on score.
 		if bool(e.spec.get("drop_extend", false)):
 			_spawn_item(Item.Kind.EXTEND, p, Vector2(0, -240))
+		# Always a weapon here: a boss kill is the natural place to rethink
+		# which gun you want to take into the next stage.
+		_spawn_item(Item.Kind.WEAPON, p, Vector2(randf_range(-70, 70), -200))
 		for i in 12:
 			_spawn_item(Item.Kind.BIG_STAR, p,
 				Vector2(randf_range(-260, 260), randf_range(-260, -60)))
@@ -553,6 +580,18 @@ func _drop_for(e: Enemy) -> void:
 		_spawn_item(Item.Kind.BOMB, p, Vector2(0, -210))
 		_hud.flash(0.8)
 		_shake = 16.0
+
+
+## Weapon items are handed out on a counter rather than a die roll, so every run
+## gets the same couple of switch opportunities at the same points in a stage.
+func _maybe_weapon(at: Vector2) -> void:
+	if _weapon_left <= 0:
+		return
+	_weapon_drops += 1
+	if _weapon_drops % Cfg.WEAPON_DROP_EVERY != 0:
+		return
+	_weapon_left -= 1
+	_spawn_item(Item.Kind.WEAPON, at, Vector2(randf_range(-80, 80), -190))
 
 
 func _on_player_hit(_b: Bullet) -> void:
@@ -574,7 +613,7 @@ func _on_bullet_cleared(pos: Vector2) -> void:
 		_add_score(Cfg.HYPER_ABSORB_SCORE)
 		_absorbed += 1
 		_fx.spark(pos, ABSORB_COL, 0.11)
-		_hud.charge_spark(pos + _field.position, ABSORB_COL)
+		_hud.charge_spark(_to_screen(pos), ABSORB_COL)
 		if _absorbed % ABSORB_POPUP_EVERY == 0:
 			_fx.popup(pos, "+%s" % Cfg.fmt_score(
 				Cfg.HYPER_ABSORB_SCORE * ABSORB_POPUP_EVERY), ABSORB_COL, 22)
@@ -643,7 +682,8 @@ func _process(dt: float) -> void:
 	if _shake > 0.05:
 		_shake = maxf(0.0, _shake - dt * 34.0)
 		_field.position = _field_base + Vector2(
-			randf_range(-_shake, _shake), randf_range(-_shake, _shake))
+			randf_range(-_shake, _shake),
+			randf_range(-_shake, _shake)) * _field_scale
 	else:
 		_field.position = _field_base
 
@@ -655,6 +695,9 @@ func _process(dt: float) -> void:
 	_hud.set_hyper(_player.hyper_charge, _player.is_hyper())
 	_hud.set_hyper_active(_player.is_hyper())
 	_hud.set_power_progress(_player.chip_fraction())
+	_hud.set_weapon(_player.weapon_name(),
+		_player.weapon == Player.Weapon.TRACKER,
+		_player.lock_count(), _player.lock_cap())
 
 
 ## Ramming an enemy hull is fatal. The hull box is deliberately smaller than the
@@ -717,11 +760,16 @@ func _collect(it: Item) -> void:
 				_fx.popup(it.position, "+1", Color(1, 0.6, 0.35), 18)
 		Item.Kind.BOMB:
 			AU.play("powerup", 0.05)
-			if _player.bombs < 8:
+			if _player.bombs < Cfg.MAX_BOMBS:
 				_player.bombs += 1
 				_fx.popup(it.position, "BOMB", Color(0.5, 0.8, 1.0), 22)
 			else:
 				_add_score(20_000)
+		Item.Kind.WEAPON:
+			# cycle_weapon() plays the swap sting itself.
+			var mode := _player.cycle_weapon()
+			_fx.popup(it.position, mode, Item.COLORS[Item.Kind.WEAPON], 28)
+			_hud.flash(0.18)
 		Item.Kind.EXTEND:
 			lives_left += 1
 			_fx.popup(it.position, "1UP", Color(0.5, 1, 0.6), 26)

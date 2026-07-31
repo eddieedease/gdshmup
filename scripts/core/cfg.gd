@@ -3,16 +3,23 @@ extends RefCounted
 ## Global tuning constants and the playfield geometry.
 ##
 ## The game is designed for a 1920x1080 canvas. The playfield is a fixed
-## 810x1080 rectangle (classic 3:4 arcade "tate" aspect) centred horizontally;
-## whatever is left over becomes the two sidebars. Because the project stretch
-## aspect is "expand", the real viewport width varies per monitor, so the
-## horizontal offset is resolved at runtime by field_x().
+## 810x1080 rectangle (classic 3:4 arcade "tate" aspect); whatever is left over
+## becomes the two sidebars. The project stretch aspect is "expand", so the real
+## viewport is exactly 1920x1080 only on a 16:9 display - on anything taller
+## (16:10 and 3:2 laptops) Godot hands us the extra height at the bottom, and on
+## anything wider it hands us extra width. The field is therefore scaled and
+## centred at runtime by field_rect() so it always fills the window height
+## instead of leaving a dead strip under it.
 
 const DESIGN_W := 1920.0
 const DESIGN_H := 1080.0
 
 const FIELD_W := 810.0
 const FIELD_H := 1080.0
+
+## The sidebars never shrink past this, so the HUD stays readable even on a
+## window too tall for the field to fill it (see field_scale).
+const MIN_SIDEBAR := 300.0
 
 ## Enemies/bullets are culled once they leave this margin around the field.
 const CULL_MARGIN := 140.0
@@ -38,7 +45,31 @@ const MAX_POWER := POWER_PER_BAR * POWER_BARS
 ## last, so full power lands around stage three of five instead of stage one.
 const POWER_CHIP_COST := [2, 3, 4]
 
+## Bombs stop dropping once you are holding this many. Stockpiling eight of them
+## turned every boss into a burn-it-down formality; a hard ceiling of three keeps
+## a bomb something you spend rather than something you hoard.
+const MAX_BOMBS := 3
+
 const CHAIN_TIMEOUT := 1.35
+
+# --- Weapons -----------------------------------------------------------------
+## Weapon items per stage. Two switches is enough to answer "wrong tool for this
+## stage" without letting you flip modes fight by fight.
+const WEAPON_DROPS_PER_STAGE := 2
+## Every Nth meaningful drop in a stage also coughs up a weapon item, until the
+## stage's allowance runs out. Deterministic so the pacing is the same each run.
+const WEAPON_DROP_EVERY := 4
+## Tracking fire is tinted toward this so the mode is readable at a glance.
+## Player fire is drawn with BULLET_GAIN and clips toward white, so a pale tint
+## would come out looking exactly like a vulcan bolt. This one is kept low in
+## red specifically so it survives the clip as violet instead of washing out to
+## the magenta hyper already owns.
+## The mode's damage cut lives in the per-ship `track_*` arrays in ShipDefs.
+const TRACK_TINT := Color(0.55, 0.25, 1.0)
+## Missiles that can pile onto a single *ordinary* enemy in one lock volley, so
+## a salvo spreads across a wave instead of deleting one popcorn ship. Bosses
+## are exempt: they are the target worth emptying the whole rack into.
+const LOCK_STACK_MAX := 3
 
 # --- Hyper ------------------------------------------------------------------
 ## The meter fills through normal play and fires itself when it tops out.
@@ -125,9 +156,21 @@ static func color_of(name: String) -> Color:
 	return BULLET_COLORS.get(name, Color.WHITE)
 
 
-## Left edge of the playfield inside the current viewport.
-static func field_x(viewport_size: Vector2) -> float:
-	return floor((viewport_size.x - FIELD_W) * 0.5)
+## Uniform scale that makes the 810x1080 field fill the viewport height, backed
+## off if that would squeeze the sidebars past MIN_SIDEBAR.
+static func field_scale(viewport_size: Vector2) -> float:
+	var fit_h := viewport_size.y / FIELD_H
+	var fit_w := (viewport_size.x - MIN_SIDEBAR * 2.0) / FIELD_W
+	return maxf(minf(fit_h, fit_w), 0.25)
+
+
+## The playfield in viewport coordinates: scaled to the window height and
+## centred. Everything that must line up with gameplay derives from this.
+static func field_rect(viewport_size: Vector2) -> Rect2:
+	var s := field_scale(viewport_size)
+	var sz := Vector2(FIELD_W, FIELD_H) * s
+	return Rect2(Vector2(floor((viewport_size.x - sz.x) * 0.5),
+		floor((viewport_size.y - sz.y) * 0.5)), sz)
 
 
 ## Clamps a position to the playfield with a small inset.

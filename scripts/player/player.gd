@@ -2,11 +2,17 @@ class_name Player
 extends Node2D
 ## The player ship.
 ##
-## Two weapons share one body, DoDonPachi style:
-##   SHOT  (J) - rapid spread bullets, full speed, bits fanned wide
-##   LASER (K) - continuous piercing beam, ~40% speed, bits tucked in tight
-## Holding both favours the laser, since the slow speed is the trade-off that
-## makes precise dodging possible.
+## Two weapons share one body, DoDonPachi style, and the pair you are holding
+## depends on the weapon mode (swapped in the field by a W pickup):
+##
+##   VULCAN   SHOT  (J) - rapid spread bullets, full speed, bits fanned wide
+##            LASER (K) - continuous piercing beam, ~40% speed, bits tucked in
+##   TRACKER  SHOT  (J) - homing laser segments; weaker per hit, but they land
+##            LASER (K) - hold to paint targets inside a ring, release to fire
+##                        a heavy missile at each one
+##
+## Holding both favours the laser button in either mode, since the slow speed is
+## the trade-off that makes precise dodging possible.
 
 signal life_lost
 signal bomb_fired
@@ -15,6 +21,17 @@ signal hyper_ended
 signal damage_dealt(enemy: Node2D, amount: float, at: Vector2)
 
 enum State { ALIVE, DYING, RESPAWNING }
+enum Weapon { VULCAN, TRACKER }
+
+const WEAPON_NAMES := ["VULCAN", "TRACKER"]
+
+## Seconds between acquisitions while the lock ring is held. Quick: the cost of
+## a salvo is the focus-speed movement and the ring's reach, not the wait.
+const LOCK_INTERVAL := 0.055
+## The ring opens tight and widens while K is held, so holding longer buys both
+## more targets and more reach. Radius in pixels, growth in pixels per second.
+const LOCK_RADIUS_START := 120.0
+const LOCK_GROW := 430.0
 
 const RESPAWN_DELAY := 0.85
 const INVULN_TIME := 2.6
@@ -45,7 +62,8 @@ var colour := Color.WHITE
 var power := 1
 ## Chips banked toward the next power level; see Cfg.POWER_CHIP_COST.
 var power_chips := 0
-var bombs := 3
+var bombs := Cfg.MAX_BOMBS
+var weapon: int = Weapon.VULCAN
 var state: int = State.ALIVE
 
 var invuln := 0.0
@@ -68,6 +86,13 @@ var option_root: Node2D
 
 var _sprite: Sprite2D
 var _beam: Beam
+var _lock_ring: LockRing
+## Enemies painted by the current lock, in acquisition order.
+var _locks: Array = []
+var _lock_cd := 0.0
+var _locking := false
+## Current ring radius, which grows from LOCK_RADIUS_START while K is held.
+var _lock_r := LOCK_RADIUS_START
 var _shield: Sprite2D
 var _hitbox: Node2D
 var _trail: EngineTrail
@@ -75,6 +100,9 @@ var _aura: Sprite2D
 var _options: Array[OptionBit] = []
 var _shot_cd := 0.0
 var _opt_cd := 0.0
+## Alternates each tracking segment to one side of the nose, so the stream
+## weaves instead of stacking on a single line.
+var _track_side := 1.0
 var _beam_spark_cd := 0.0
 var _beam_hyper := false
 var _t := 0.0
@@ -97,6 +125,12 @@ func setup(index: int) -> void:
 	_beam = Beam.new()
 	_beam.z_index = -2
 	add_child(_beam)
+
+	_lock_ring = LockRing.new()
+	_lock_ring.col = Cfg.TRACK_TINT.lerp(Color.WHITE, 0.25)
+	_lock_ring.z_index = 4
+	_lock_ring.visible = false
+	add_child(_lock_ring)
 
 	_shield = Sprite2D.new()
 	_shield.centered = true
@@ -269,29 +303,55 @@ func _alive(dt: float) -> void:
 
 	_update_options(dt)
 
+	if weapon == Weapon.TRACKER:
+		_tracker(dt)
+	else:
+		_vulcan(dt)
+
+
+## The original pair: continuous beam on K, spread on J.
+func _vulcan(dt: float) -> void:
 	AU.set_laser(laser_held)
 	if laser_held:
 		_fire_laser(dt)
+		return
+	_hide_beams()
+	if shot_held:
+		_fire_shot(dt)
 	else:
-		_beam.visible = false
-		for o in _options:
-			o.beam.visible = false
-		if shot_held:
-			_fire_shot(dt)
-		else:
-			_shot_cd = 0.0
-			_opt_cd = 0.0
+		_shot_cd = 0.0
+		_opt_cd = 0.0
+
+
+## Homing stream on J, lock-and-release missiles on K. Beams and bits are both
+## idle in this mode; K still slows you, so it reads as "focus" either way.
+func _tracker(dt: float) -> void:
+	AU.set_laser(false)
+	_hide_beams()
+	_update_locks(dt)
+	if shot_held:
+		_fire_track(dt)
+	else:
+		_shot_cd = 0.0
+
+
+func _hide_beams() -> void:
+	_beam.visible = false
+	for o in _options:
+		o.beam.visible = false
 
 
 func _update_options(dt: float) -> void:
-	var count: int = ShipDefs.at_power(ship, "opt_count", power)
+	# The bits are vulcan hardware. TRACKER fires one beam out of the ship and
+	# nothing else, so they dock and go dark - but they keep following, or they
+	# would snap back across the screen when you switch weapons.
+	var count: int = 0 if weapon == Weapon.TRACKER \
+		else int(ShipDefs.at_power(ship, "opt_count", power))
 	var spread: Array = ship.opt_spread
 	var tight: Array = ship.opt_tight
 	for i in _options.size():
 		var o := _options[i]
 		o.visible = i < count
-		if not o.visible:
-			continue
 		var lane: int = mini(i, spread.size() - 1) if count > 1 else 0
 		var dx: float = float(tight[lane]) if laser_held else float(spread[lane])
 		var dy := 26.0 if laser_held else 14.0
@@ -362,9 +422,212 @@ func _fire_shot(dt: float) -> void:
 					b.life = 2.5
 
 
+# --- Tracker -----------------------------------------------------------------
+
+## One stream, straight off the nose. Segments launch slowly and are reeled in
+## by their own homing, so the beam snakes onto a target instead of flying at it
+## in a straight line, and consecutive segments overlap into a continuous rope.
+##
+## Power makes this beam *bigger* rather than adding more of it: the bits stay
+## dark in this mode, so everything the tracker does comes out of the ship.
+func _fire_track(dt: float) -> void:
+	_shot_cd -= dt
+	if _shot_cd <= 0.0:
+		var rate := float(ship.track_rate)
+		if is_hyper():
+			rate *= Cfg.HYPER_FIRE_BOOST
+		_shot_cd += rate
+
+		var dmg: int = ShipDefs.at_power(ship, "track_damage", power)
+		var turn: float = float(ship.track_turn) * PI / 180.0
+		var col := _track_colour()
+		var mul := _track_scale_mul()
+		var nose := position + Vector2(0, -30)
+		# A slight alternating kick keeps the rope weaving rather than laying
+		# every segment down the same line.
+		_track_side = -_track_side
+		var b := bullets.spawn(nose, -PI * 0.5 + _track_side * 0.22,
+			420.0 * _shot_speed_mul(), "ptrack", col, mul)
+		if b != null:
+			b.damage = dmg
+			b.homing = turn
+			b.homing_time = 2.0
+			b.accel = 1500.0
+			b.speed_max = 1450.0 * _shot_speed_mul()
+			b.life = 1.8
+			b.trail_len = 30.0 * mul
+		fx.muzzle(nose, -PI * 0.5, col, 0.11 * mul)
+		AU.play("track", 0.09)
+
+
+## Paints targets while K is held; the salvo goes out on release.
+func _update_locks(dt: float) -> void:
+	var was_locking := _locking
+	_locking = laser_held
+	_prune_locks()
+
+	if not _locking:
+		_lock_ring.visible = false
+		_lock_r = LOCK_RADIUS_START
+		if was_locking:
+			_fire_locks()
+		return
+
+	_lock_r = minf(_lock_r + LOCK_GROW * dt, float(ship.lock_radius))
+
+	var cap: int = ShipDefs.at_power(ship, "lock_max", power)
+	_lock_cd -= dt
+	if _lock_cd <= 0.0 and _locks.size() < cap:
+		var t := _next_lock_target()
+		if t != null:
+			_locks.append(t)
+			_lock_cd = LOCK_INTERVAL
+			# Steps up with each target in the rack, so a filling lock is
+			# audible without having to watch the counter.
+			AU.play("lock", 0.02, 0.0, 1.0 + 0.06 * float(_locks.size() - 1))
+
+	_lock_ring.visible = true
+	_lock_ring.origin = position
+	_lock_ring.radius = _lock_r
+	_lock_ring.targets = _locks
+	_lock_ring.full = _locks.size() >= cap
+
+
+## The nearest lockable enemy, preferring ones nothing is aimed at yet: every
+## target in the ring gets a first missile before any target gets a second.
+## A boss will happily take the whole rack; ordinary enemies cap out low so one
+## popcorn ship cannot swallow a salvo meant for the wave around it.
+func _next_lock_target() -> Node2D:
+	var r := _lock_r
+	var cap := lock_cap()
+	var best: Node2D = null
+	var best_key := INF
+	for e in enemies:
+		if not e.alive or not e.hittable:
+			continue
+		var d: float = position.distance_to(e.position)
+		if d > r:
+			continue
+		var stacked := _lock_count(e)
+		if stacked >= (cap if e is Boss else Cfg.LOCK_STACK_MAX):
+			continue
+		var key := float(stacked) * 100000.0 + d
+		if key < best_key:
+			best_key = key
+			best = e
+	return best
+
+
+func _lock_count(e: Node2D) -> int:
+	var n := 0
+	for l in _locks:
+		if l == e:
+			n += 1
+	return n
+
+
+func _prune_locks() -> void:
+	var i := _locks.size() - 1
+	while i >= 0:
+		var e = _locks[i]
+		if not is_instance_valid(e) or not e.alive or not e.hittable:
+			_locks.remove_at(i)
+		i -= 1
+
+
+func _fire_locks() -> void:
+	if _locks.is_empty():
+		return
+	var dmg: int = ShipDefs.at_power(ship, "lock_damage", power)
+	# Turns hard enough to stay on a target at 2500px/s, which is the whole
+	# reason these are worth the focus-speed movement it took to paint them.
+	var turn := 900.0 * PI / 180.0
+	var col := _track_colour().lightened(0.15)
+	var fired := 0
+	for i in _locks.size():
+		var e = _locks[i]
+		if not is_instance_valid(e) or not e.alive:
+			continue
+		# Fan the launch angles so a salvo blooms outward and curves back in
+		# rather than leaving as one indistinguishable column.
+		var t := 0.0 if _locks.size() == 1 \
+			else float(i) / float(_locks.size() - 1) - 0.5
+		var m := bullets.spawn(position + Vector2(0, -18),
+			-PI * 0.5 + t * 1.7, 620.0 * _shot_speed_mul(), "plock",
+			col, _shot_scale_mul())
+		if m == null:
+			break
+		m.seek = e
+		m.damage = dmg
+		m.homing = turn
+		m.homing_time = 3.0
+		m.accel = 5200.0
+		m.speed_max = 2500.0
+		m.life = 2.0
+		m.trail_len = 64.0
+		fired += 1
+	_locks.clear()
+	if fired == 0:
+		return
+	fx.shockwave(position, 130.0, col, 0.35, 6.0)
+	AU.play("missile", 0.08)
+
+
+func _clear_locks() -> void:
+	_locks.clear()
+	_locking = false
+	_lock_cd = 0.0
+	_lock_r = LOCK_RADIUS_START
+	if _lock_ring != null:
+		_lock_ring.visible = false
+
+
+## Tracking fire carries the mode's tint over the ship's own colour, so which
+## weapon is up is obvious from the projectiles alone.
+## The mode's colour leads and the hull's follows, rather than the other way
+## round: which gun you are holding has to be readable from the fire itself.
+func _track_colour() -> Color:
+	var c := Cfg.TRACK_TINT.lerp(colour, 0.22)
+	return c.lerp(Cfg.HYPER_TINT, 0.4) if is_hyper() else c
+
+
+## Swaps weapon mode - what the W pickup does. Returns the new mode's name.
+func cycle_weapon() -> String:
+	weapon = Weapon.VULCAN if weapon == Weapon.TRACKER else Weapon.TRACKER
+	_clear_locks()
+	_hide_beams()
+	AU.set_laser(false)
+	_shot_cd = 0.0
+	_opt_cd = 0.0
+	fx.shockwave(position, 230.0, _track_colour(), 0.5, 9.0)
+	AU.play("weapon")
+	return weapon_name()
+
+
+func weapon_name() -> String:
+	return WEAPON_NAMES[weapon]
+
+
+## Painted targets and the current ceiling, for the HUD.
+func lock_count() -> int:
+	return _locks.size()
+
+
+func lock_cap() -> int:
+	return int(ShipDefs.at_power(ship, "lock_max", power))
+
+
 ## Hyper fattens, accelerates and tints your fire.
 func _shot_scale_mul() -> float:
 	return Cfg.HYPER_BULLET_SCALE if is_hyper() else 1.0
+
+
+## The tracking beam's thickness, which is what power buys in this mode. Hyper
+## adds to it, but at a gentler rate than it fattens vulcan shots - the beam is
+## already large by then.
+func _track_scale_mul() -> float:
+	var s: float = ShipDefs.at_power(ship, "track_scale", power)
+	return s * (1.25 if is_hyper() else 1.0)
 
 
 func _shot_speed_mul() -> float:
@@ -486,6 +749,7 @@ func hit() -> void:
 	_dead_timer = RESPAWN_DELAY
 	_sprite.visible = false
 	_beam.visible = false
+	_clear_locks()
 	for o in _options:
 		o.visible = false
 		o.beam.visible = false
@@ -507,11 +771,13 @@ func revive() -> void:
 	set_process(true)
 	position = Vector2(Cfg.FIELD_W * 0.5, Cfg.FIELD_H - 170.0)
 	invuln = INVULN_TIME
-	bombs = 3
+	bombs = Cfg.MAX_BOMBS
 	power = 1
 	power_chips = 0
+	weapon = Weapon.VULCAN
 	hyper_time = 0.0
 	hyper_charge = 0.0
+	_clear_locks()
 	_refresh_beams()
 	for o in _options:
 		o.position = position
@@ -523,7 +789,7 @@ func _begin_respawn() -> void:
 	_sprite.visible = true
 	position = Vector2(Cfg.FIELD_W * 0.5, Cfg.FIELD_H + 90.0)
 	invuln = INVULN_TIME
-	bombs = maxi(bombs, 2)
+	bombs = clampi(bombs, 2, Cfg.MAX_BOMBS)
 	for o in _options:
 		o.position = position
 
@@ -594,6 +860,63 @@ class EngineTrail:
 				draw_line(
 					_pts[i] - _origin + off, _pts[i + 1] - _origin + off,
 					Color(colour.r, colour.g, colour.b, fade), w, true)
+
+
+## The acquisition display for TRACKER's lock: a dashed ring at the ship's lock
+## radius plus a bracket on every painted target. Drawn in the player's local
+## space, so target positions are offset by `origin` (the ship in field space).
+class LockRing:
+	extends Node2D
+	const SEGMENTS := 40
+
+	var radius := 240.0
+	var col := Color.WHITE
+	var origin := Vector2.ZERO
+	var targets: Array = []
+	## True once the ring is holding all the targets this power level allows.
+	var full := false
+
+	var _t := 0.0
+
+	func _process(dt: float) -> void:
+		if not visible:
+			return
+		_t += dt
+		queue_redraw()
+
+	func _draw() -> void:
+		# Dashes rather than a solid circle: a solid ring this size reads as a
+		# shield, which is the one thing it must not be mistaken for.
+		var spin := _t * 1.6
+		var a := 0.55 + (0.45 if full else 0.20) * absf(sin(_t * 6.0))
+		for i in range(0, SEGMENTS, 2):
+			var a0 := spin + TAU * float(i) / float(SEGMENTS)
+			var a1 := spin + TAU * float(i + 1) / float(SEGMENTS)
+			draw_line(Vector2.from_angle(a0) * radius,
+				Vector2.from_angle(a1) * radius,
+				Color(col.r, col.g, col.b, a), 3.0)
+		# A faint inner disc edge, so a ring caught mid-growth is legible as
+		# "still opening" rather than as a ring that happens to be small.
+		draw_arc(Vector2.ZERO, radius * 0.86, 0.0, TAU, 24,
+			Color(col.r, col.g, col.b, a * 0.22), 1.5)
+
+		for e in targets:
+			if not is_instance_valid(e):
+				continue
+			_bracket(e.position - origin, maxf(e.hit_radius * 0.9, 18.0))
+
+	## Four corner ticks around a painted target, spun a little so a stack of
+	## locks on one enemy is visible as motion rather than a single static box.
+	func _bracket(at: Vector2, r: float) -> void:
+		var c := Color(col.r, col.g, col.b, 0.85)
+		var arm := r * 0.55
+		for q in 4:
+			var cx: float = -1.0 if q % 2 == 0 else 1.0
+			var cy: float = -1.0 if q < 2 else 1.0
+			var corner := at + Vector2(cx * r, cy * r)
+			draw_line(corner, corner - Vector2(cx * arm, 0.0), c, 2.0)
+			draw_line(corner, corner - Vector2(0.0, cy * arm), c, 2.0)
+		draw_circle(at, 3.0, Color(col.r, col.g, col.b, 0.55))
 
 
 ## The tiny focus dot that shows the real hitbox while the laser is held.

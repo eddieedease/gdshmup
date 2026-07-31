@@ -10,6 +10,10 @@ var _demo := false
 var _pause_at := -1.0
 var _hyper_at := -1.0
 var _tunnel_at := -1.0
+var _weapon_at := -1.0
+var _power := 0
+var _hunt := false
+var _sized := false
 
 
 func _ready() -> void:
@@ -29,7 +33,8 @@ func _ready() -> void:
 			GS.last_run_stage = 1
 			_after_run()
 		_:
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+			if not _sized:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 			_show_title()
 
 
@@ -40,6 +45,10 @@ func _ready() -> void:
 ##   --ship=N                     preselect ship N (1-3)
 ##   --boss                       boss rush: skip the waves in every stage
 ##   --demo                       drive the ship automatically
+##   --size=WxH                   force a windowed size, for aspect-ratio tests
+##   --weapon-at=SECONDS          swap weapon mode once, N seconds in (--demo)
+##   --power=N                    start at power level N, 1-12 (--demo)
+##   --hunt                       fly at the nearest enemy instead of loitering
 func _apply_cli() -> void:
 	for arg in OS.get_cmdline_user_args() + OS.get_cmdline_args():
 		if arg.begins_with("--screen="):
@@ -56,12 +65,26 @@ func _apply_cli() -> void:
 			GS.mode = GS.Mode.ENDLESS
 		elif arg == "--demo":
 			_demo = true
+		elif arg.begins_with("--size="):
+			# The project starts fullscreen, so a size is only meaningful once
+			# the window is put back into windowed mode.
+			var wh := arg.split("=", true, 1)[1].split("x")
+			if wh.size() == 2:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+				DisplayServer.window_set_size(Vector2i(int(wh[0]), int(wh[1])))
+				_sized = true
 		elif arg.begins_with("--pause-at="):
 			_pause_at = float(arg.split("=", true, 1)[1])
 		elif arg.begins_with("--hyper-at="):
 			_hyper_at = float(arg.split("=", true, 1)[1])
 		elif arg.begins_with("--tunnel-at="):
 			_tunnel_at = float(arg.split("=", true, 1)[1])
+		elif arg.begins_with("--weapon-at="):
+			_weapon_at = float(arg.split("=", true, 1)[1])
+		elif arg.begins_with("--power="):
+			_power = int(arg.split("=", true, 1)[1])
+		elif arg == "--hunt":
+			_hunt = true
 
 
 func _swap(node: Node) -> void:
@@ -108,6 +131,9 @@ func _show_game() -> void:
 		d.pause_after = _pause_at
 		d.hyper_after = _hyper_at
 		d.tunnel_after = _tunnel_at
+		d.weapon_after = _weapon_at
+		d.power_level = _power
+		d.hunt = _hunt
 		g.add_child(d)
 
 
