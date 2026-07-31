@@ -124,8 +124,7 @@ func run(d: Director) -> void:
 	d.carousel("SCOUT", 7, 190.0, -1.8, {"hp": 40})
 	await d.wait(0.7)
 	d.carousel("POPCORN", 5, 105.0, 2.6, {"hp": 28})
-	await d.wait(9.0)
-	await d.wait_clear(10.0)
+	await d.wait_clear(19.0)
 	await d.wait(1.2)
 
 	# 8. Twin wardens, one per side, with entirely different arsenals.

@@ -471,7 +471,7 @@ func _fire_track(dt: float, rate_mul: float = 1.0) -> void:
 			b.accel = 1500.0
 			b.speed_max = 1450.0 * _shot_speed_mul()
 			b.life = 1.8
-			b.trail_len = 30.0 * mul
+			b.trail_len = 20.0 * mul
 		fx.muzzle(nose, -PI * 0.5, col, 0.11 * mul)
 		AU.play("track", 0.09)
 
@@ -646,6 +646,12 @@ func cycle_weapon() -> String:
 
 func weapon_name() -> String:
 	return WEAPON_NAMES[weapon]
+
+
+## The hull's current sheet frame - thruster cycle and bank. The HUD's ship
+## portrait plays this back, so the sidebar leans and burns with the real ship.
+func sprite_frame() -> int:
+	return _sprite.frame if is_instance_valid(_sprite) else 2
 
 
 ## Painted targets and the current ceiling, for the HUD.

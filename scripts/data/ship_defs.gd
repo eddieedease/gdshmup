@@ -50,10 +50,12 @@ const SHIPS := [
 		"opt_spread": [46.0, 84.0, 118.0, 150.0],
 		"opt_tight": [13.0, 25.0, 37.0, 49.0],
 		# Tracker: the even-handed version. Middling cycle, middling turn.
-		"track_rate": 0.075,
-		"track_damage": [6, 7, 8, 10, 11, 12, 14, 15, 17, 18, 20, 22],
-		"track_scale": [0.55, 0.62, 0.70, 0.78, 0.86, 0.94,
-			1.02, 1.10, 1.18, 1.28, 1.36, 1.45],
+		# Rate and damage are paired: halving one halves the other, so the
+		# segment length can come down without moving the mode's damage.
+		"track_rate": 0.040,
+		"track_damage": [3, 4, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12],
+		"track_scale": [0.55, 0.60, 0.66, 0.71, 0.77, 0.82,
+			0.88, 0.93, 0.99, 1.04, 1.10, 1.15],
 		"track_turn": 620.0,
 		"lock_radius": [210.0, 223.0, 236.0, 249.0, 262.0, 275.0,
 			288.0, 301.0, 314.0, 327.0, 339.0, 350.0],
@@ -88,10 +90,10 @@ const SHIPS := [
 		"opt_tight": [9.0, 18.0, 27.0, 36.0],
 		# Tracker: a thin, fast, hard-turning ribbon, in keeping with a hull built
 		# around picking single targets off.
-		"track_rate": 0.055,
-		"track_damage": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-		"track_scale": [0.42, 0.48, 0.54, 0.60, 0.66, 0.72,
-			0.78, 0.84, 0.92, 1.00, 1.08, 1.16],
+		"track_rate": 0.030,
+		"track_damage": [3, 3, 4, 4, 5, 5, 6, 7, 7, 8, 8, 9],
+		"track_scale": [0.42, 0.46, 0.51, 0.55, 0.60, 0.64,
+			0.69, 0.73, 0.78, 0.82, 0.87, 0.92],
 		"track_turn": 780.0,
 		"lock_radius": [180.0, 191.0, 202.0, 213.0, 224.0, 235.0,
 			246.0, 257.0, 268.0, 279.0, 290.0, 300.0],
@@ -126,10 +128,10 @@ const SHIPS := [
 		"opt_tight": [17.0, 32.0, 46.0, 60.0],
 		# Tracker: a slow, fat, lazily-turning rope, plus the widest lock ring
 		# and by far the heaviest salvo.
-		"track_rate": 0.100,
-		"track_damage": [9, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 31],
-		"track_scale": [0.72, 0.82, 0.92, 1.02, 1.12, 1.24,
-			1.36, 1.48, 1.58, 1.68, 1.78, 1.90],
+		"track_rate": 0.055,
+		"track_damage": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17],
+		"track_scale": [0.72, 0.79, 0.85, 0.92, 0.98, 1.05,
+			1.11, 1.18, 1.24, 1.31, 1.37, 1.45],
 		"track_turn": 460.0,
 		"lock_radius": [250.0, 267.0, 284.0, 300.0, 316.0, 332.0,
 			348.0, 364.0, 380.0, 398.0, 414.0, 430.0],

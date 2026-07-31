@@ -90,8 +90,10 @@ func run(d: Director) -> void:
 	d.carousel("SCOUT", 6, 180.0, -1.7, {"hp": 30})
 	await d.wait(0.8)
 	d.carousel("POPCORN", 5, 100.0, 2.4, {"hp": 20})
-	await d.wait(9.0)
-	await d.wait_clear(9.0)
+	# Carousel rings orbit until they are killed, so this is purely "until the
+	# field is clear". A blind wait here left a powered-up player staring at an
+	# empty screen for the balance of it.
+	await d.wait_clear(18.0)
 	await d.wait(1.0)
 
 	# 6. Seeker swarm.

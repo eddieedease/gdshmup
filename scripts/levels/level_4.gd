@@ -49,8 +49,7 @@ func run(d: Director) -> void:
 				"phase": 180.0 * i},
 		})
 		await d.wait(0.4)
-	await d.wait(6.0)
-	await d.wait_clear(9.0)
+	await d.wait_clear(15.0)
 	await d.wait(1.2)
 
 	# 5. Minelayers: the field itself becomes the threat.

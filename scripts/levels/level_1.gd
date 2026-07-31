@@ -61,8 +61,7 @@ func run(d: Director) -> void:
 		"attacks": [{"pattern": "aimed", "n": 1, "speed": 265.0,
 			"style": "small", "color": "pink", "start": 1.2, "interval": 1.6}],
 	})
-	await d.wait(7.5)
-	await d.wait_clear(8.0)
+	await d.wait_clear(15.5)
 
 	# 8. Divers.
 	for i in 3:

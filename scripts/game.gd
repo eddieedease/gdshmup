@@ -696,6 +696,7 @@ func _process(dt: float) -> void:
 	_hud.set_weapon(_player.weapon_name(),
 		_player.weapon == Player.Weapon.TRACKER,
 		_player.lock_count(), _player.lock_cap())
+	_hud.set_ship_frame(_player.sprite_frame())
 
 
 ## Ramming an enemy hull is fatal. The hull box is deliberately smaller than the

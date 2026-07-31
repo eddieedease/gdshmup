@@ -274,6 +274,12 @@ func set_ship(ship: Dictionary) -> void:
 	_ship_icon.frame = 2
 
 
+## Plays the portrait off the same sheet frame the hull is on, so the sidebar
+## ship burns its thrusters and banks exactly as you fly.
+func set_ship_frame(frame: int) -> void:
+	_ship_icon.frame = clampi(frame, 0, 5)
+
+
 ## `hyper` is 0..1 charge; `hyper_active` swaps the meter to a countdown.
 ## Progress toward the next power level (chips banked), 0..1.
 func set_power_progress(frac: float) -> void:

@@ -79,8 +79,7 @@ func run(d: Director) -> void:
 	})
 	await d.wait(1.0)
 	d.carousel("SCOUT", 5, 150.0, -1.5, {"hp": 24})
-	await d.wait(8.0)
-	await d.wait_clear(9.0)
+	await d.wait_clear(17.0)
 	await d.wait(1.2)
 
 	# 7. Spinner wall - three spirals braiding together.

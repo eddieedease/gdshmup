@@ -180,12 +180,16 @@ func _style(b: Bullet, style: String, mul: float) -> void:
 			b.radius = 18.0 * mul
 		"ptrack":
 			# Short wave segments: fired in a stream they read as one snaking
-			# laser rather than as a line of separate shots. Only the width is
-			# cut back - the length has to stay, or consecutive segments stop
-			# overlapping and the rope breaks up into dashes.
+			# laser rather than as a line of separate shots.
+			#
+			# Kept deliberately stubby. Each segment is a straight stick that
+			# rotates to face its heading, so a long one turning through a
+			# homing curve reads as a kink rather than a bend - the beam looked
+			# like a run of angled sticks instead of a rope. Short segments at a
+			# high fire rate keep the same coverage and curve smoothly.
 			b.frames = Art.apply_sheet(b, "wavebeam", true)
-			b.scale = Vector2(0.12, 0.46) * mul
-			b.radius = 13.0 * mul
+			b.scale = Vector2(0.11, 0.26) * mul
+			b.radius = 12.0 * mul
 		"plock":
 			# Lean and long rather than fat: these cross the screen at close to
 			# 2500px/s, so they need to read as darts, not as drifting rockets.
